@@ -5,6 +5,8 @@
 #include "FirebaseConfig.h"
 #include "CURRENTSensor.h"
 
+#include "VOLTAGESensor.h"
+
 
 // Create DHT sensor object
 DHTSensor dhtSensor(DHT_PIN);
@@ -13,12 +15,17 @@ DHTSensor dhtSensor(DHT_PIN);
 #define CURRENT_SENSOR_PIN 34
 CURRENTSensor currentSensor(CURRENT_SENSOR_PIN);
 
+// Create Voltage sensor object (ZMPT101B on pin 35 by default)
+#define VOLTAGE_SENSOR_PIN 35
+VOLTAGESensor voltageSensor(VOLTAGE_SENSOR_PIN);
+
 void setup()
 {
     Serial.begin(115200);
     dhtSensor.begin();
     initFirebase();
     currentSensor.begin();
+    voltageSensor.begin();
 }
 
 void loop()
@@ -29,6 +36,9 @@ void loop()
     // Microtask: Read current
     float current = currentSensor.readCurrent();
 
+    // Microtask: Read voltage
+    float voltage = voltageSensor.readVoltage();
+
 
     // Microtask: Print sensor values
     Serial.print("Temperature: ");
@@ -37,7 +47,9 @@ void loop()
     Serial.print(humidity);
     Serial.print(" %, Current: ");
     Serial.print(current, 3);
-    Serial.println(" A");
+    Serial.print(" A, Voltage: ");
+    Serial.print(voltage, 1);
+    Serial.println(" V");
 
 
     // Microtask: Send data to Firebase
@@ -59,6 +71,13 @@ void loop()
         Serial.println("Current sent to Firebase.");
     } else {
         Serial.print("Failed to send current: ");
+        Serial.println(fbdo.errorReason());
+    }
+
+    if (Firebase.RTDB.setFloat(&fbdo, "/voltage", voltage)) {
+        Serial.println("Voltage sent to Firebase.");
+    } else {
+        Serial.print("Failed to send voltage: ");
         Serial.println(fbdo.errorReason());
     }
 
