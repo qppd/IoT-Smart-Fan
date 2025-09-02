@@ -1,37 +1,53 @@
 # SmartFan
 
-SmartFan is an IoT-based project designed to control the speed of a standard-size stand fan based on the temperature sensed by a DHT22 sensor. The project uses an ESP32 microcontroller and integrates Firebase for real-time data monitoring and Wi-Fi credentials management using WiFiManager.
+
+SmartFan is an IoT-based project for automating and monitoring a standard-size stand fan using an ESP32 microcontroller. It features:
+- Automatic fan speed control based on temperature (PID algorithm)
+- Real-time temperature, humidity, current, and voltage monitoring
+- Buzzer alerts for over-temperature
+- Firebase integration for cloud data logging
+- Dynamic Wi-Fi configuration using WiFiManager
+All hardware abstraction and control logic are modularized for easy maintenance and extension.
 
 ---
+
 
 ## Features
 
-- **Automatic Fan Speed Control**: Adjusts fan speed based on the temperature.
-- **Temperature and Humidity Monitoring**: Uses the DHT22 sensor for accurate readings.
-- **Firebase Integration**: Real-time data logging and monitoring.
-- **Wi-Fi Credentials Management**: Dynamic Wi-Fi configuration using WiFiManager.
-- **Compact Design**: Suitable for small home environments.
+- **Automatic Fan Speed Control**: PID-based adjustment of fan speed according to temperature.
+- **Temperature & Humidity Monitoring**: DHT22 sensor for environmental data.
+- **Current & Voltage Monitoring**: ACS712 and ZMPT101B sensors for power usage and safety.
+- **Buzzer Alerts**: Audible warning if temperature exceeds setpoint.
+- **Firebase Integration**: Real-time upload of all sensor and control data.
+- **Wi-Fi Credentials Management**: User-friendly setup via WiFiManager captive portal.
+- **Modular Codebase**: Each hardware component and logic is encapsulated in its own module.
 
 ---
+
 
 ## Hardware Requirements
 
 - **ESP32 Microcontroller**
 - **DHT22 Temperature and Humidity Sensor**
-- **TRIAC Module (for universal motor fans)** or **VFD (for induction motor fans)**
-- **Power Monitoring Module** (e.g., HLW8012 or PZEM-004T)
-- **Relay or Optoisolator** (for TRIAC/VFD control)
+- **ACS712 Current Sensor** (default: 5A, pin 34)
+- **ZMPT101B Voltage Sensor** (pin 35)
+- **Piezo Buzzer** (pin 25)
+- **TRIAC Module** (for universal motor fans) or **VFD** (for induction motor fans)
+- **Relay/Optoisolator** (for TRIAC/VFD control)
 - **Power Supply**
 
 ---
+
 
 ## Software Requirements
 
 - **Arduino IDE** (latest version)
 - **Firebase ESP-Client Library** by Mobizt
 - **WiFiManager Library**
+- **PID_v1 Library**
 
 ---
+
 
 ## Installation
 
@@ -43,12 +59,13 @@ SmartFan is an IoT-based project designed to control the speed of a standard-siz
 2. **Install Required Libraries**:
    - Open Arduino IDE.
    - Go to **Sketch > Include Library > Manage Libraries...**.
-   - Search for and install the following:
+   - Install:
      - **Firebase ESP-Client**
      - **WiFiManager**
+     - **PID_v1**
 
-3. **Configure Firebase**:
-   - Replace placeholders in `firebase_credentials.h` with your Firebase project credentials.
+3. **Configure Firebase and Wi-Fi**:
+   - Edit `firebase_credentials.h` and set your Firebase and Wi-Fi credentials.
 
 4. **Upload the Code**:
    - Connect your ESP32 to your computer.
@@ -57,50 +74,66 @@ SmartFan is an IoT-based project designed to control the speed of a standard-siz
 
 ---
 
+
 ## How It Works
 
 1. **Wi-Fi Configuration**:
-   - On first boot, the ESP32 creates an access point named `SmartFan_AP`.
-   - Connect to the access point and configure Wi-Fi credentials via the portal.
+   - On first boot, ESP32 creates an access point (`SmartFan_AP`).
+   - Connect and enter Wi-Fi credentials via the captive portal (WiFiManager).
 
-2. **Temperature Sensing**:
-   - The DHT22 sensor measures temperature and humidity.
+2. **Sensor Readings**:
+   - DHT22 measures temperature and humidity.
+   - ACS712 measures current; ZMPT101B measures voltage.
 
-3. **Fan Speed Control**:
-   - The fan speed is adjusted based on the temperature using a TRIAC or VFD module.
+3. **Fan Speed Control (PID)**:
+   - PID algorithm adjusts fan speed (PWM) based on temperature.
+   - Setpoint and PID parameters are configurable in code.
 
-4. **Firebase Logging**:
-   - Temperature and humidity data are sent to Firebase in real-time.
+4. **Buzzer Alerts**:
+   - If temperature exceeds setpoint + 2°C, buzzer beeps for 300ms.
+
+5. **Data Logging (Firebase)**:
+   - All sensor readings and fan control values are sent to Firebase RTDB in real-time.
+   - Errors in data upload are printed to serial.
+
+6. **Serial Monitoring**:
+   - All values are printed to the serial console for debugging and monitoring.
 
 ---
+
 
 ## File Structure
 
 ```plaintext
 SmartFan/
-├── DHTSensor.cpp
-├── DHTSensor.h
-├── FirebaseConfig.cpp
-├── FirebaseConfig.h
-├── PinConfig.h
-├── firebase_credentials.h
-├── SmartFan.ino
-└── README.md
+├── SmartFan.ino              # Main application logic
+├── DHTSensor.cpp/.h          # DHT22 temperature/humidity sensor abstraction
+├── CURRENTSensor.cpp/.h      # ACS712 current sensor abstraction
+├── VOLTAGESensor.cpp/.h      # ZMPT101B voltage sensor abstraction
+├── PIDConfig.cpp/.h          # PID control logic
+├── BUZZERConfig.cpp/.h       # Buzzer control
+├── FirebaseConfig.cpp/.h     # Firebase and Wi-Fi setup
+├── firebase_credentials.h    # User credentials for Firebase and Wi-Fi
+├── PinConfig.h               # Pin assignments
+├── README.md                 # Project documentation
 ```
 
 ---
 
+
 ## Contributing
 
-Contributions are welcome! Please fork the repository and submit a pull request.
+Contributions are welcome! Please fork the repository and submit a pull request. For major changes, please open an issue first to discuss what you would like to change.
 
 ---
+
 
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
 
 ---
+
 
 ## Author
 
