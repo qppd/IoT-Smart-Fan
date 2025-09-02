@@ -7,6 +7,8 @@
 
 #include "VOLTAGESensor.h"
 
+#include "PIDConfig.h"
+
 
 // Create DHT sensor object
 DHTSensor dhtSensor(DHT_PIN);
@@ -19,6 +21,10 @@ CURRENTSensor currentSensor(CURRENT_SENSOR_PIN);
 #define VOLTAGE_SENSOR_PIN 35
 VOLTAGESensor voltageSensor(VOLTAGE_SENSOR_PIN);
 
+// PID control variables
+double temperatureInput = 0, fanOutput = 0, temperatureSetpoint = 28.0; // Example setpoint 28°C
+PIDConfig fanPID(&temperatureInput, &fanOutput, &temperatureSetpoint, 2.0, 5.0, 1.0); // Example PID values
+
 void setup()
 {
     Serial.begin(115200);
@@ -26,21 +32,25 @@ void setup()
     initFirebase();
     currentSensor.begin();
     voltageSensor.begin();
+    fanPID.begin();
+    fanPID.setOutputLimits(0, 255); // For PWM control (0-255)
 }
 
 void loop()
 {
+
+    // Microtask: Read sensors
     float temperature = dhtSensor.readTemperature();
     float humidity = dhtSensor.readHumidity();
-
-    // Microtask: Read current
     float current = currentSensor.readCurrent();
-
-    // Microtask: Read voltage
     float voltage = voltageSensor.readVoltage();
 
+    // Microtask: PID control for fan speed
+    temperatureInput = temperature;
+    fanPID.compute();
 
-    // Microtask: Print sensor values
+
+    // Microtask: Print sensor and control values
     Serial.print("Temperature: ");
     Serial.print(temperature);
     Serial.print(" °C, Humidity: ");
@@ -49,7 +59,8 @@ void loop()
     Serial.print(current, 3);
     Serial.print(" A, Voltage: ");
     Serial.print(voltage, 1);
-    Serial.println(" V");
+    Serial.print(" V, Fan PWM: ");
+    Serial.println((int)fanOutput);
 
 
     // Microtask: Send data to Firebase
@@ -78,6 +89,13 @@ void loop()
         Serial.println("Voltage sent to Firebase.");
     } else {
         Serial.print("Failed to send voltage: ");
+        Serial.println(fbdo.errorReason());
+    }
+
+    if (Firebase.RTDB.setFloat(&fbdo, "/fan_pwm", fanOutput)) {
+        Serial.println("Fan PWM sent to Firebase.");
+    } else {
+        Serial.print("Failed to send fan PWM: ");
         Serial.println(fbdo.errorReason());
     }
 
