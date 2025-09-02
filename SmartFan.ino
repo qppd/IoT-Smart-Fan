@@ -9,6 +9,8 @@
 
 #include "PIDConfig.h"
 
+#include "BUZZERConfig.h"
+
 
 // Create DHT sensor object
 DHTSensor dhtSensor(DHT_PIN);
@@ -25,6 +27,10 @@ VOLTAGESensor voltageSensor(VOLTAGE_SENSOR_PIN);
 double temperatureInput = 0, fanOutput = 0, temperatureSetpoint = 28.0; // Example setpoint 28°C
 PIDConfig fanPID(&temperatureInput, &fanOutput, &temperatureSetpoint, 2.0, 5.0, 1.0); // Example PID values
 
+// Buzzer object (Piezo buzzer on pin 25 by default)
+#define BUZZER_PIN 25
+BUZZERConfig buzzer(BUZZER_PIN);
+
 void setup()
 {
     Serial.begin(115200);
@@ -34,6 +40,7 @@ void setup()
     voltageSensor.begin();
     fanPID.begin();
     fanPID.setOutputLimits(0, 255); // For PWM control (0-255)
+    buzzer.begin();
 }
 
 void loop()
@@ -48,6 +55,11 @@ void loop()
     // Microtask: PID control for fan speed
     temperatureInput = temperature;
     fanPID.compute();
+
+    // Microtask: Buzzer alert if temperature exceeds threshold
+    if (temperature > (temperatureSetpoint + 2)) {
+        buzzer.beep(300); // Beep for 300ms if temperature is too high
+    }
 
 
     // Microtask: Print sensor and control values
