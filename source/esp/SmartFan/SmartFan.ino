@@ -34,9 +34,18 @@ BUZZERConfig buzzer(BUZZER_PIN);
 // TRIACModule object for PWM control
 TRIACModule triac(TRIAC_PIN, ZERO_CROSS_PIN);
 
+// WiFi reset button variables
+unsigned long buttonPressTime = 0;
+bool buttonPressed = false;
+const unsigned long RESET_HOLD_TIME = 5000; // 5 seconds to reset WiFi
+
 void setup()
 {
     Serial.begin(115200);
+    
+    // Initialize WiFi reset button
+    pinMode(WIFI_RESET_PIN, INPUT_PULLUP);
+    
     dhtSensor.begin();
     firebaseManager.begin();
     firebaseManager.beginTokenStream();
@@ -48,10 +57,15 @@ void setup()
 
     // TRIACModule setup
     triac.begin();
+    
+    Serial.println("Smart Fan System Initialized");
+    Serial.println("Hold BOOT button for 5 seconds to reset WiFi settings");
 }
 
 void loop()
 {
+    // Check WiFi reset button
+    checkWiFiResetButton();
 
     // Microtask: Read sensors
     float temperature = dhtSensor.readTemperature();
@@ -116,4 +130,28 @@ void loop()
     firebaseManager.logDeviceData(deviceId, now, temperature, (int)fanOutput, voltage, current, watt, kwh);
 
     delay(2000); // Read every 2 seconds
+}
+
+void checkWiFiResetButton() {
+    // Read button state (active LOW)
+    bool currentButtonState = (digitalRead(WIFI_RESET_PIN) == LOW);
+    
+    if (currentButtonState && !buttonPressed) {
+        // Button just pressed
+        buttonPressed = true;
+        buttonPressTime = millis();
+        Serial.println("WiFi reset button pressed...");
+    } else if (!currentButtonState && buttonPressed) {
+        // Button released
+        buttonPressed = false;
+        Serial.println("WiFi reset button released");
+    } else if (currentButtonState && buttonPressed) {
+        // Button is being held
+        unsigned long holdTime = millis() - buttonPressTime;
+        if (holdTime >= RESET_HOLD_TIME) {
+            Serial.println("WiFi reset button held for 5 seconds - Resetting WiFi settings");
+            buzzer.beep(1000); // Long beep to confirm reset
+            firebaseManager.resetWiFiSettings();
+        }
+    }
 }

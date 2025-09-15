@@ -12,5 +12,6 @@
 #define BUZZER_PIN 25          // Piezo buzzer pin
 #define TRIAC_PIN 12           // TRIAC module output pin
 #define ZERO_CROSS_PIN 2       // Zero cross detection pin for TRIAC dimming
+#define WIFI_RESET_PIN 0       // WiFi reset button pin (boot button)
 
 #endif // PINCONFIG_H

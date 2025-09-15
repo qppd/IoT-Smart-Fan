@@ -23,6 +23,9 @@ SmartFan is a complete IoT solution for automating and monitoring a standard-siz
 - Firebase integration for cloud data logging and remote control
 - Dynamic Wi-Fi configuration using WiFiManager
 - Android app for real-time monitoring, control, notifications, and device management
+- **NEW: WiFi Setup Integration** - Configure device WiFi through the Android app
+- **NEW: WiFi Reset Capability** - Reset WiFi settings via hardware button
+- **NEW: Captive Portal Setup** - Easy first-time device configuration
 
 All hardware abstraction, control logic, and app features are modularized for easy maintenance and extension.
 

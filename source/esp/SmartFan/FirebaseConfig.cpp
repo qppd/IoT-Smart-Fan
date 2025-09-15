@@ -8,7 +8,7 @@ FirebaseManager::FirebaseManager() : _tokenCount(0), _tokenParentPath("plastech"
 }
 
 void FirebaseManager::begin() {
-    initWiFi();
+    initWiFiManager();
     
     Serial.printf("Firebase Client v%s\n\n", FIREBASE_CLIENT_VERSION);
 
@@ -39,6 +39,51 @@ void FirebaseManager::initWiFi() {
     Serial.println();
     Serial.print("Connected with IP: ");
     Serial.println(WiFi.localIP());
+}
+
+void FirebaseManager::initWiFiManager() {
+    // Set callback for when entering config mode
+    _wifiManager.setAPCallback([this](WiFiManager *myWiFiManager) {
+        this->configModeCallback(myWiFiManager);
+    });
+
+    // Custom parameters for device identification
+    WiFiManagerParameter custom_device_id("device_id", "Device ID", "SmartFan-001", 20);
+    _wifiManager.addParameter(&custom_device_id);
+
+    // Try to connect to previously saved WiFi
+    // If it fails, it starts an access point with the specified name
+    // and goes into a blocking loop awaiting configuration
+    String apName = "SmartFan-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+    
+    if (!_wifiManager.autoConnect(apName.c_str(), "smartfan123")) {
+        Serial.println("Failed to connect and hit timeout");
+        delay(3000);
+        // Reset and try again
+        ESP.restart();
+        delay(5000);
+    }
+
+    // If we get here, we have connected to WiFi
+    Serial.println("WiFi connected successfully!");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+    
+    // Save custom parameters
+    Serial.print("Device ID: ");
+    Serial.println(custom_device_id.getValue());
+}
+
+void FirebaseManager::configModeCallback(WiFiManager *myWiFiManager) {
+    Serial.println("Entered config mode");
+    Serial.println(WiFi.softAPIP());
+    Serial.println(myWiFiManager->getConfigPortalSSID());
+}
+
+void FirebaseManager::resetWiFiSettings() {
+    _wifiManager.resetSettings();
+    Serial.println("WiFi settings reset. Restarting...");
+    ESP.restart();
 }
 
 void FirebaseManager::updateDeviceCurrent(const String& deviceId, float temperature, int fanSpeed, const String& mode, unsigned long lastUpdate, float voltage, float current, float watt, float kwh) {

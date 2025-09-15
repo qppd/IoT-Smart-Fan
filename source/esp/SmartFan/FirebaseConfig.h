@@ -1,8 +1,8 @@
-
-#ifndef FIREBASECONFIG_H
-#define FIREBASECONFIG_H
+#ifndef FIREBASE_CONFIG_H
+#define FIREBASE_CONFIG_H
 
 #include <WiFi.h>
+#include <WiFiManager.h>
 #include <Firebase_ESP_Client.h>
 #include "firebase_credentials.h"
 
@@ -13,6 +13,8 @@ public:
     FirebaseManager();
     void begin();
     void initWiFi();
+    void initWiFiManager();
+    void resetWiFiSettings();
     
     // Device data management
     void updateDeviceCurrent(const String& deviceId, float temperature, int fanSpeed, const String& mode, unsigned long lastUpdate, float voltage, float current, float watt, float kwh);
@@ -29,6 +31,7 @@ private:
     FirebaseData _fbdo;
     FirebaseAuth _auth;
     FirebaseConfig _config;
+    WiFiManager _wifiManager;
     
     // Token management
     String _deviceTokens[MAX_TOKENS];
@@ -42,6 +45,7 @@ private:
     // Private helper methods
     static void tokenStreamCallback(MultiPathStream stream);
     static void tokenStreamTimeoutCallback(bool timeout);
+    void configModeCallback(WiFiManager *myWiFiManager);
 };
 
-#endif // FIREBASECONFIG_H
+#endif // FIREBASE_CONFIG_H
