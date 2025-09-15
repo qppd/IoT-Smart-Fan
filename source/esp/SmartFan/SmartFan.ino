@@ -1,15 +1,13 @@
 #include <Arduino.h>
 #include "PinConfig.h"
 #include "DHTSensor.h"
-
 #include "FirebaseConfig.h"
 #include "CURRENTSensor.h"
-
 #include "VOLTAGESensor.h"
-
 #include "PIDConfig.h"
-
 #include "BUZZERConfig.h"
+
+#include "TRIACModule.h"
 
 
 // Create DHT sensor object
@@ -31,6 +29,9 @@ PIDConfig fanPID(&temperatureInput, &fanOutput, &temperatureSetpoint, 2.0, 5.0, 
 #define BUZZER_PIN 25
 BUZZERConfig buzzer(BUZZER_PIN);
 
+// TRIACModule object for PWM control (example: pin 12)
+TRIACModule triac(12);
+
 void setup()
 {
     Serial.begin(115200);
@@ -41,6 +42,9 @@ void setup()
     fanPID.begin();
     fanPID.setOutputLimits(0, 255); // For PWM control (0-255)
     buzzer.begin();
+
+    // TRIACModule setup
+    triac.begin();
 }
 
 void loop()
@@ -51,6 +55,18 @@ void loop()
     float humidity = dhtSensor.readHumidity();
     float current = currentSensor.readCurrent();
     float voltage = voltageSensor.readVoltage();
+
+    // TRIACModule test: sweep power from 0% to 100% and back
+    static int power = 0;
+    static int dir = 1;
+    triac.setPower(power);
+    Serial.print("TRIAC Power: ");
+    Serial.print(power);
+    Serial.println(" %");
+    delay(50);
+    power += dir;
+    if (power >= 100) dir = -1;
+    if (power <= 0) dir = 1;
 
     // Microtask: PID control for fan speed
     temperatureInput = temperature;
