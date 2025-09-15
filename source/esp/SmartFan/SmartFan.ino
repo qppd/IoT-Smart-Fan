@@ -1,3 +1,4 @@
+
 #include <Arduino.h>
 #include "PinConfig.h"
 #include "DHTSensor.h"
@@ -6,12 +7,16 @@
 #include "VOLTAGESensor.h"
 #include "PIDConfig.h"
 #include "BUZZERConfig.h"
-
 #include "TRIACModule.h"
+
+
 
 
 // Create DHT sensor object
 DHTSensor dhtSensor(DHT_PIN);
+
+// Create Firebase manager object
+FirebaseManager firebaseManager;
 
 // Create Current sensor object (ACS712 5A on pin 34 by default)
 #define CURRENT_SENSOR_PIN 34
@@ -36,7 +41,8 @@ void setup()
 {
     Serial.begin(115200);
     dhtSensor.begin();
-    initFirebase();
+    firebaseManager.begin();
+    firebaseManager.beginTokenStream();
     currentSensor.begin();
     voltageSensor.begin();
     fanPID.begin();
@@ -55,6 +61,16 @@ void loop()
     float humidity = dhtSensor.readHumidity();
     float current = currentSensor.readCurrent();
     float voltage = voltageSensor.readVoltage();
+    float watt = voltage * current;
+    static float kwh = 0;
+    static unsigned long lastUpdateMillis = 0;
+    unsigned long nowMillis = millis();
+    // kWh calculation: energy (Wh) = power (W) * time (h)
+    if (lastUpdateMillis > 0) {
+        float hours = (nowMillis - lastUpdateMillis) / 3600000.0;
+        kwh += watt * hours / 1000.0; // kWh
+    }
+    lastUpdateMillis = nowMillis;
 
     // TRIACModule test: sweep power from 0% to 100% and back
     static int power = 0;
@@ -87,45 +103,20 @@ void loop()
     Serial.print(current, 3);
     Serial.print(" A, Voltage: ");
     Serial.print(voltage, 1);
-    Serial.print(" V, Fan PWM: ");
+    Serial.print(" V, Power: ");
+    Serial.print(watt, 2);
+    Serial.print(" W, Energy: ");
+    Serial.print(kwh, 5);
+    Serial.print(" kWh, Fan PWM: ");
     Serial.println((int)fanOutput);
 
 
-    // Microtask: Send data to Firebase
-    if (Firebase.RTDB.setFloat(&fbdo, "/temperature", temperature)) {
-        Serial.println("Temperature sent to Firebase.");
-    } else {
-        Serial.print("Failed to send temperature: ");
-        Serial.println(fbdo.errorReason());
-    }
-
-    if (Firebase.RTDB.setFloat(&fbdo, "/humidity", humidity)) {
-        Serial.println("Humidity sent to Firebase.");
-    } else {
-        Serial.print("Failed to send humidity: ");
-        Serial.println(fbdo.errorReason());
-    }
-
-    if (Firebase.RTDB.setFloat(&fbdo, "/current", current)) {
-        Serial.println("Current sent to Firebase.");
-    } else {
-        Serial.print("Failed to send current: ");
-        Serial.println(fbdo.errorReason());
-    }
-
-    if (Firebase.RTDB.setFloat(&fbdo, "/voltage", voltage)) {
-        Serial.println("Voltage sent to Firebase.");
-    } else {
-        Serial.print("Failed to send voltage: ");
-        Serial.println(fbdo.errorReason());
-    }
-
-    if (Firebase.RTDB.setFloat(&fbdo, "/fan_pwm", fanOutput)) {
-        Serial.println("Fan PWM sent to Firebase.");
-    } else {
-        Serial.print("Failed to send fan PWM: ");
-        Serial.println(fbdo.errorReason());
-    }
+    // Microtask: Send device state and log to Firebase (new structure)
+    String deviceId = "deviceIdABC"; // TODO: Set this per device
+    String mode = "auto"; // Example, set as needed
+    unsigned long now = millis() / 1000 + 1692620000; // Example timestamp logic
+    firebaseManager.updateDeviceCurrent(deviceId, temperature, (int)fanOutput, mode, now, voltage, current, watt, kwh);
+    firebaseManager.logDeviceData(deviceId, now, temperature, (int)fanOutput, voltage, current, watt, kwh);
 
     delay(2000); // Read every 2 seconds
 }

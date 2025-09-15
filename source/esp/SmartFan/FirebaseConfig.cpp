@@ -1,29 +1,35 @@
-#include <WiFiManager.h>
+#include "FirebaseConfig.h"
+#include <Firebase_ESP_Client.h>
+#include "addons/TokenHelper.h"
+#include "addons/RTDBHelper.h"
 
-FirebaseData fbdo;
-FirebaseAuth auth;
-FirebaseConfig config;
-
-void initWiFi() {
-    WiFiManager wifiManager;
-
-    // Uncomment to reset WiFi credentials
-    // wifiManager.resetSettings();
-
-    // AutoConnect with saved credentials or open portal for new credentials
-    if (!wifiManager.autoConnect("SmartFan_AP", "password")) {
-        Serial.println("Failed to connect to WiFi. Restarting...");
-        delay(3000);
-        ESP.restart();
-    }
-
-    Serial.println("Connected to WiFi.");
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
+FirebaseManager::FirebaseManager() : _tokenCount(0), _tokenParentPath("plastech") {
+    _instance = this;
 }
 
-void initFirebase() {
-    // Connect to Wi-Fi
+void FirebaseManager::begin() {
+    initWiFi();
+    
+    Serial.printf("Firebase Client v%s\n\n", FIREBASE_CLIENT_VERSION);
+
+    _config.api_key = API_KEY;
+    _config.database_url = DATABASE_URL;
+
+    _config.service_account.data.client_email = FIREBASE_CLIENT_EMAIL;
+    _config.service_account.data.project_id = FIREBASE_PROJECT_ID;
+    _config.service_account.data.private_key = PRIVATE_KEY;
+
+    Firebase.reconnectNetwork(true);
+    _fbdo.setBSSLBufferSize(4096, 1024);
+    _fbdo.setResponseSize(4096);
+
+    Firebase.begin(&_config, &_auth);
+    while (!Firebase.ready()) {
+        delay(100);
+    }
+}
+
+void FirebaseManager::initWiFi() {
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     Serial.print("Connecting to Wi-Fi");
     while (WiFi.status() != WL_CONNECTED) {
@@ -33,85 +39,123 @@ void initFirebase() {
     Serial.println();
     Serial.print("Connected with IP: ");
     Serial.println(WiFi.localIP());
-
-    // Configure Firebase
-    config.host = FIREBASE_HOST;
-    config.api_key = FIREBASE_AUTH;
-    Firebase.begin(&config, &auth);
-    Firebase.reconnectWiFi(true);
-
-    Serial.println("Firebase initialized.");
 }
 
-
-#define ENABLE_USER_AUTH
-#define ENABLE_DATABASE
-
-#include <FirebaseClient.h>
-#include "FirebaseConfig.h"
-#include "firebase_credentials.h"
-
-// --- Microtask 1: Global objects and auth setup ---
-SSL_CLIENT ssl_client;
-using AsyncClient = AsyncClientClass;
-AsyncClient aClient(ssl_client);
-
-UserAuth user_auth(FIREBASE_AUTH, USER_EMAIL, USER_PASSWORD, 3000);
-FirebaseApp app;
-RealtimeDatabase Database;
-AsyncResult databaseResult;
-bool firebaseTaskComplete = false;
-
-// --- Microtask 2: Firebase initialization ---
-void initFirebase() {
-    Serial.println("[Firebase] Connecting to Wi-Fi...");
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    while (WiFi.status() != WL_CONNECTED) {
-        Serial.print(".");
-        delay(300);
-    }
-    Serial.println();
-    Serial.print("Connected with IP: ");
-    Serial.println(WiFi.localIP());
-
-    Firebase.printf("Firebase Client v%s\n", FIREBASE_CLIENT_VERSION);
-    set_ssl_client_insecure_and_buffer(ssl_client);
-
-    Serial.println("Initializing Firebase app...");
-    initializeApp(aClient, app, getAuth(user_auth), auth_debug_print, "🔐 authTask");
-    app.getApp<RealtimeDatabase>(Database);
-    Database.url(FIREBASE_HOST); // Use host as database URL
-}
-
-// --- Microtask 3: Data update example ---
-void updateFirebaseData(const String &path, int value) {
-    object_t json;
-    JsonWriter writer;
-    writer.create(json, "data/value", value);
-    Serial.println("[Firebase] Updating data (JSON object only)...");
-    Database.update(aClient, path.c_str(), json, processData, "updateTask");
-}
-
-// --- Microtask 4: Async result processing ---
-void processData(AsyncResult &aResult) {
-    if (!aResult.isResult())
-        return;
-    if (aResult.isEvent()) {
-        Firebase.printf("Event task: %s, msg: %s, code: %d\n", aResult.uid().c_str(), aResult.eventLog().message().c_str(), aResult.eventLog().code());
-    }
-    if (aResult.isDebug()) {
-        Firebase.printf("Debug task: %s, msg: %s\n", aResult.uid().c_str(), aResult.debug().c_str());
-    }
-    if (aResult.isError()) {
-        Firebase.printf("Error task: %s, msg: %s, code: %d\n", aResult.uid().c_str(), aResult.error().message().c_str(), aResult.error().code());
-    }
-    if (aResult.available()) {
-        Firebase.printf("task: %s, payload: %s\n", aResult.uid().c_str(), aResult.c_str());
+void FirebaseManager::updateDeviceCurrent(const String& deviceId, float temperature, int fanSpeed, const String& mode, unsigned long lastUpdate, float voltage, float current, float watt, float kwh) {
+    String path = "/devices/" + deviceId + "/current";
+    FirebaseJson json;
+    json.set("temperature", temperature);
+    json.set("fanSpeed", fanSpeed);
+    json.set("mode", mode);
+    json.set("lastUpdate", (int64_t)lastUpdate);
+    json.set("voltage", voltage);
+    json.set("current", current);
+    json.set("watt", watt);
+    json.set("kwh", kwh);
+    if (Firebase.RTDB.setJSON(&_fbdo, path, &json)) {
+        Serial.println("Device current state updated in Firebase.");
+    } else {
+        Serial.print("Failed to update device current: ");
+        Serial.println(_fbdo.errorReason());
     }
 }
 
-// --- Microtask 5: Firebase loop for async tasks ---
-void firebaseLoop() {
-    app.loop();
-    processData(databaseResult);
+void FirebaseManager::logDeviceData(const String& deviceId, unsigned long timestamp, float temperature, int fanSpeed, float voltage, float current, float watt, float kwh) {
+    String logId = String(timestamp); // Use timestamp as logId
+    String path = "/devices/" + deviceId + "/logs/" + logId;
+    FirebaseJson json;
+    json.set("timestamp", (int64_t)timestamp);
+    json.set("temperature", temperature);
+    json.set("fanSpeed", fanSpeed);
+    json.set("voltage", voltage);
+    json.set("current", current);
+    json.set("watt", watt);
+    json.set("kwh", kwh);
+    if (Firebase.RTDB.setJSON(&_fbdo, path, &json)) {
+        Serial.println("Device log entry added in Firebase.");
+    } else {
+        Serial.print("Failed to add device log: ");
+        Serial.println(_fbdo.errorReason());
+    }
 }
+
+void FirebaseManager::sendMessageToAll(const String& title, const String& body) {
+    for (int i = 0; i < _tokenCount; i++) {
+        Serial.println("📲 Sending to: " + _deviceTokens[i]);
+        FCM_HTTPv1_JSON_Message msg;
+        msg.token = _deviceTokens[i];
+        msg.notification.title = title;
+        msg.notification.body = body;
+        FirebaseJson payload;
+        payload.add("status", "1");
+        msg.data = payload.raw();
+        if (Firebase.FCM.send(&_fbdo, &msg)) {
+            Serial.println("Sent!");
+        } else {
+            Serial.println("Error: " + _fbdo.errorReason());
+        }
+    }
+}
+
+void FirebaseManager::tokenStreamCallback(MultiPathStream stream) {
+    if (_instance && stream.get("/tokens")) {
+        Serial.println("token Updated Path: " + stream.dataPath);
+        Serial.println("token New Value: " + stream.value);
+        FirebaseJson json;
+        FirebaseJsonData result;
+        json.clear();
+        json.setJsonData(stream.value);
+        size_t count = json.iteratorBegin();
+        _instance->_tokenCount = 0;
+        for (size_t i = 0; i < count; i++) {
+            FirebaseJson::IteratorValue value = json.valueAt(i);
+            String pushID = value.key;
+            if (!value.value.startsWith("{")) {
+                Serial.println("Ignored non-object key: " + pushID);
+                continue;
+            }
+            String fullPath = pushID + "/device_token";
+            if (json.get(result, fullPath)) {
+                String deviceToken = result.stringValue;
+                Serial.println("✅ Extracted device_token from " + pushID + ": " + deviceToken);
+                if (_instance->_tokenCount < MAX_TOKENS) {
+                    _instance->_deviceTokens[_instance->_tokenCount] = deviceToken;
+                    _instance->_tokenCount++;
+                    Serial.println("Adding to array");
+                } else {
+                    Serial.println("⚠️ Token list full, cannot store more.");
+                }
+            } else {
+                Serial.println("⚠️ Skipping key (no device_token): " + pushID);
+            }
+        }
+        json.iteratorEnd();
+        _instance->sendMessageToAll("PlasTech", "This is plastech first notification! Hi :)");
+    }
+}
+
+void FirebaseManager::tokenStreamTimeoutCallback(bool timeout) {
+    if (timeout) {
+        Serial.println("token stream timed out, attempting to resume...");
+    }
+    if (_instance && !_instance->_tokenStream.httpConnected()) {
+        Serial.printf("token Error code: %d, reason: %s\n", _instance->_tokenStream.httpCode(), _instance->_tokenStream.errorReason().c_str());
+    }
+}
+
+void FirebaseManager::beginTokenStream() {
+    Serial.println("Starting token stream");
+    if (!Firebase.RTDB.beginMultiPathStream(&_tokenStream, _tokenParentPath)) {
+        Serial.printf("token stream initialization failed: %s\n", _tokenStream.errorReason().c_str());
+    } else {
+        Firebase.RTDB.setMultiPathStreamCallback(&_tokenStream, tokenStreamCallback, tokenStreamTimeoutCallback);
+        Serial.println("Firebase token stream initialized successfully!");
+    }
+}
+
+bool FirebaseManager::isReady() {
+    return Firebase.ready();
+}
+
+// Static instance initialization
+FirebaseManager* FirebaseManager::_instance = nullptr;

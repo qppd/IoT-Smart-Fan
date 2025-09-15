@@ -1,39 +1,47 @@
-#define FIREBASECONFIG_H
-
-#include <WiFi.h>
-#include <FirebaseESP32.h>
-#include "firebase_credentials.h"
-
-// Firebase objects
-extern FirebaseData fbdo;
-extern FirebaseAuth auth;
-extern FirebaseConfig config;
-
-// Function to initialize Firebase and Wi-Fi
-void initFirebase();
-
-#endif // FIREBASECONFIG_H
 
 #ifndef FIREBASECONFIG_H
 #define FIREBASECONFIG_H
 
 #include <WiFi.h>
-#include <FirebaseClient.h>
+#include <Firebase_ESP_Client.h>
 #include "firebase_credentials.h"
 
-// --- Async Firebase objects ---
-extern SSL_CLIENT ssl_client;
-extern AsyncClientClass aClient;
-extern UserAuth user_auth;
-extern FirebaseApp app;
-extern RealtimeDatabase Database;
-extern AsyncResult databaseResult;
-extern bool firebaseTaskComplete;
+#define MAX_TOKENS 10
 
-// --- Functions ---
-void initFirebase();
-void updateFirebaseData(const String &path, int value);
-void processData(AsyncResult &aResult);
-void firebaseLoop();
+class FirebaseManager {
+public:
+    FirebaseManager();
+    void begin();
+    void initWiFi();
+    
+    // Device data management
+    void updateDeviceCurrent(const String& deviceId, float temperature, int fanSpeed, const String& mode, unsigned long lastUpdate, float voltage, float current, float watt, float kwh);
+    void logDeviceData(const String& deviceId, unsigned long timestamp, float temperature, int fanSpeed, float voltage, float current, float watt, float kwh);
+    
+    // FCM messaging
+    void sendMessageToAll(const String& title, const String& body);
+    void beginTokenStream();
+    
+    // Status check
+    bool isReady();
+
+private:
+    FirebaseData _fbdo;
+    FirebaseAuth _auth;
+    FirebaseConfig _config;
+    
+    // Token management
+    String _deviceTokens[MAX_TOKENS];
+    int _tokenCount;
+    FirebaseData _tokenStream;
+    String _tokenParentPath;
+    
+    // Static instance for callbacks
+    static FirebaseManager* _instance;
+    
+    // Private helper methods
+    static void tokenStreamCallback(MultiPathStream stream);
+    static void tokenStreamTimeoutCallback(bool timeout);
+};
 
 #endif // FIREBASECONFIG_H
