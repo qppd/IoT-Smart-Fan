@@ -62,6 +62,7 @@ All hardware abstraction, control logic, and app features are modularized for ea
 
 ---
 
+
 ## Hardware Requirements (ESP32)
 
 - **ESP32 Microcontroller**
@@ -69,8 +70,13 @@ All hardware abstraction, control logic, and app features are modularized for ea
 - **ACS712 Current Sensor** (default: 5A, pin 34)
 - **ZMPT101B Voltage Sensor** (pin 35)
 - **Piezo Buzzer** (pin 25)
-- **TRIAC Module** (for universal motor fans) or **VFD** (for induction motor fans)
-- **Relay/Optoisolator** (for TRIAC/VFD control)
+- **AC Light Lamp Dimming and Motor Dimmer Module** (TRIAC module, 1 Channel, 3.3V/5V logic, 50/60Hz, 8A-400V)
+   - This module controls the amount of AC voltage delivered to a device, as used in fan regulators or light dimmer switches.
+   - Suitable for home and industrial use: can dim lights, control AC motors, electric pumps, and tools.
+   - Supports up to 8A load current, 400V AC, with overload protection (auto cutoff on overload).
+   - Provides smooth dimming (slow ramp up/down) for lamps and fans, creating a pleasant effect.
+   - Typical size: ~5.7x2.85cm (2.24x1.12in). Compatible with ESP32 3.3V logic.
+   - Example: Robodyn or similar modules.
 - **Power Supply**
 
 ---
