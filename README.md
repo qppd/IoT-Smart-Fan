@@ -1,6 +1,19 @@
 
 # SmartFan: IoT Stand Fan Automation & Android App
 
+---
+
+## Recent Updates (September 2025)
+
+- **TRIACModule PWM Integration:**
+   - Added `TRIACModule.h` and `TRIACModule.cpp` in `source/esp/SmartFan/` for PWM-based TRIAC control of the fan.
+   - Integrated the new module into `SmartFan.ino` for easy testing and future expansion.
+   - The TRIACModule allows direct PWM control of a TRIAC for fan speed, replacing potentiometer-based dimming logic.
+   - Example test code in `SmartFan.ino` sweeps TRIAC power from 0% to 100% and back for validation.
+   - This update is based on the RobotDyn Dimmer library logic, adapted for PWM and ESP32 compatibility.
+
+Refer to the new files and the updated `SmartFan.ino` for implementation details.
+
 SmartFan is a complete IoT solution for automating and monitoring a standard-size stand fan using an ESP32 microcontroller and a companion Android app. It features:
 
 - Automatic fan speed control based on temperature (PID algorithm)
