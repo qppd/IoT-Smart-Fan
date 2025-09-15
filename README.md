@@ -3,16 +3,17 @@
 
 ---
 
+
 ## Recent Updates (September 2025)
 
 - **TRIACModule PWM Integration:**
-   - Added `TRIACModule.h` and `TRIACModule.cpp` in `source/esp/SmartFan/` for PWM-based TRIAC control of the fan.
-   - Integrated the new module into `SmartFan.ino` for easy testing and future expansion.
-   - The TRIACModule allows direct PWM control of a TRIAC for fan speed, replacing potentiometer-based dimming logic.
-   - Example test code in `SmartFan.ino` sweeps TRIAC power from 0% to 100% and back for validation.
-   - This update is based on the RobotDyn Dimmer library logic, adapted for PWM and ESP32 compatibility.
+   - Added `TRIACModule.h` and `TRIACModule.cpp` in `source/esp/SmartFan/` for robust, interrupt-driven PWM-based TRIAC control of the fan.
+   - Integrated the new module into `SmartFan.ino` for modular, testable fan speed control.
+   - The TRIACModule enables precise, software-based phase angle control of a TRIAC for fan speed, replacing analog dimming logic.
+   - Example code in `SmartFan.ino` sweeps TRIAC power from 0% to 100% and back for validation.
+   - The implementation is based on the RobotDyn Dimmer library, but fully adapted for ESP32 and modular C++.
 
-Refer to the new files and the updated `SmartFan.ino` for implementation details.
+Refer to the new files and the updated `SmartFan.ino` for implementation details. The codebase is now highly modular, with each hardware component and logic encapsulated in its own class for maintainability and extension.
 
 SmartFan is a complete IoT solution for automating and monitoring a standard-size stand fan using an ESP32 microcontroller and a companion Android app. It features:
 
@@ -27,15 +28,17 @@ All hardware abstraction, control logic, and app features are modularized for ea
 
 ---
 
+
 ## ESP32 Firmware Features
 
-- **Automatic Fan Speed Control**: PID-based adjustment of fan speed according to temperature.
-- **Temperature & Humidity Monitoring**: DHT22 sensor for environmental data.
-- **Current & Voltage Monitoring**: ACS712 and ZMPT101B sensors for power usage and safety.
-- **Buzzer Alerts**: Audible warning if temperature exceeds setpoint.
-- **Firebase Integration**: Real-time upload of all sensor and control data.
-- **Wi-Fi Credentials Management**: User-friendly setup via WiFiManager captive portal.
-- **Modular Codebase**: Each hardware component and logic is encapsulated in its own module.
+- **Automatic Fan Speed Control**: PID-based adjustment of fan speed according to temperature, with configurable setpoint and PID parameters.
+- **TRIAC Phase Angle Control**: Software-based PWM/phase angle control of a TRIAC for universal motor fans, using zero-cross detection and precise timing (see `TRIACModule`).
+- **Temperature & Humidity Monitoring**: DHT22 sensor abstraction for environmental data.
+- **Current & Voltage Monitoring**: ACS712 and ZMPT101B sensors, with calibration and RMS calculation, for real-time power usage and safety monitoring.
+- **Buzzer Alerts**: Audible warning if temperature exceeds setpoint (configurable, see `BUZZERConfig`).
+- **Firebase Integration**: Real-time upload of all sensor and control data, plus device logs, to Firebase Realtime Database.
+- **Wi-Fi Credentials Management**: User-friendly setup via WiFiManager captive portal (first boot AP mode).
+- **Highly Modular Codebase**: Each hardware component and logic is encapsulated in its own C++ class/module for easy maintenance and extension.
 
 ---
 
@@ -110,15 +113,17 @@ All hardware abstraction, control logic, and app features are modularized for ea
 
 ---
 
+
 ## How It Works
 
 ### ESP32
 1. **Wi-Fi Configuration**: On first boot, ESP32 creates an access point (`SmartFan_AP`). Connect and enter Wi-Fi credentials via the captive portal (WiFiManager).
-2. **Sensor Readings**: DHT22 measures temperature/humidity; ACS712 measures current; ZMPT101B measures voltage.
-3. **Fan Speed Control (PID)**: PID algorithm adjusts fan speed (PWM) based on temperature. Setpoint and PID parameters are configurable in code.
-4. **Buzzer Alerts**: If temperature exceeds setpoint + 2°C, buzzer beeps for 300ms.
-5. **Data Logging (Firebase)**: All sensor readings and fan control values are sent to Firebase RTDB in real-time. Errors in data upload are printed to serial.
+2. **Sensor Readings**: DHT22 measures temperature/humidity; ACS712 measures current; ZMPT101B measures voltage (with calibration for true RMS).
+3. **Fan Speed Control (PID + TRIAC)**: PID algorithm computes fan speed based on temperature. The `TRIACModule` uses zero-cross detection and phase angle control to set fan power (0–100%).
+4. **Buzzer Alerts**: If temperature exceeds setpoint + 2°C, buzzer beeps for 300ms (configurable).
+5. **Data Logging (Firebase)**: All sensor readings and fan control values are sent to Firebase RTDB in real-time. Device logs are also created for history.
 6. **Serial Monitoring**: All values are printed to the serial console for debugging and monitoring.
+7. **Modular Design**: All hardware and logic (sensors, actuators, cloud, control) are implemented as separate C++ classes for clarity and reusability.
 
 ### Android App
 1. **User registers/logs in.**

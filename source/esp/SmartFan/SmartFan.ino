@@ -18,24 +18,21 @@ DHTSensor dhtSensor(DHT_PIN);
 // Create Firebase manager object
 FirebaseManager firebaseManager;
 
-// Create Current sensor object (ACS712 5A on pin 34 by default)
-#define CURRENT_SENSOR_PIN 34
+// Create Current sensor object (ACS712 5A)
 CURRENTSensor currentSensor(CURRENT_SENSOR_PIN);
 
-// Create Voltage sensor object (ZMPT101B on pin 35 by default)
-#define VOLTAGE_SENSOR_PIN 35
+// Create Voltage sensor object (ZMPT101B)
 VOLTAGESensor voltageSensor(VOLTAGE_SENSOR_PIN);
 
 // PID control variables
 double temperatureInput = 0, fanOutput = 0, temperatureSetpoint = 28.0; // Example setpoint 28°C
 PIDConfig fanPID(&temperatureInput, &fanOutput, &temperatureSetpoint, 2.0, 5.0, 1.0); // Example PID values
 
-// Buzzer object (Piezo buzzer on pin 25 by default)
-#define BUZZER_PIN 25
+// Buzzer object (Piezo buzzer)
 BUZZERConfig buzzer(BUZZER_PIN);
 
-// TRIACModule object for PWM control (example: pin 12)
-TRIACModule triac(12);
+// TRIACModule object for PWM control
+TRIACModule triac(TRIAC_PIN, ZERO_CROSS_PIN);
 
 void setup()
 {
