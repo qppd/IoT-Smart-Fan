@@ -227,7 +227,7 @@ void handleWiFiReset() {
         // If button held for 3 seconds, reset WiFi
         if (millis() - resetStartTime > 3000) {
             Serial.println("WiFi Reset requested!");
-            resetWiFi();
+            firebaseManager.resetWiFiSettings();
             resetStartTime = 0;
         }
     } else {

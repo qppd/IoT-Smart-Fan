@@ -217,22 +217,22 @@ void FirebaseManager::logDeviceData(const String& deviceId, unsigned long timest
     }
 }
 
-void FirebaseManager::sendSmartFanData(int bottle_large, int bottle_small, int bin_level, int total_rewards, int total_weight, int coin_stock) {
-    // Create JSON object for Smart Fan data in PlasTech format
+void FirebaseManager::sendSmartFanData(float temperature, int fanSpeed, float voltage, float current, float watt, float kwh) {
+    // Create JSON object for Smart Fan data
     FirebaseJson json;
-    json.set("bottle_large", bottle_large);
-    json.set("bottle_small", bottle_small);
-    json.set("bin_level", bin_level);
-    json.set("total_rewards", total_rewards);
-    json.set("total_weight", total_weight);
-    json.set("coin_stock", coin_stock);
+    json.set("temperature", temperature);
+    json.set("fanSpeed", fanSpeed);
+    json.set("voltage", voltage);
+    json.set("current", current);
+    json.set("watt", watt);
+    json.set("kwh", kwh);
     json.set("device_type", "smart_fan");
     json.set("timestamp", millis());
 
     Serial.println("Sending Smart Fan data as JSON...");
 
-    // Send to Firebase under plastech path
-    if (Firebase.RTDB.setJSON(&fbdo, "/plastech/smartfan", &json)) {
+    // Send to Firebase under smartfan path
+    if (Firebase.RTDB.setJSON(&fbdo, "/smartfan/data", &json)) {
         Serial.println("Smart Fan data sent successfully!");
     } else {
         Serial.print("Error sending Smart Fan data: ");

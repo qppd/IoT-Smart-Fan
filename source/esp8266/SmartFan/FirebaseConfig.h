@@ -15,7 +15,7 @@ public:
     void begin();
     void updateDeviceCurrent(const String& deviceId, float temperature, int fanSpeed, const String& mode, unsigned long lastUpdate, float voltage, float current, float watt, float kwh);
     void logDeviceData(const String& deviceId, unsigned long timestamp, float temperature, int fanSpeed, float voltage, float current, float watt, float kwh);
-    void sendSmartFanData(int bottle_large, int bottle_small, int bin_level, int total_rewards, int total_weight, int coin_stock);
+    void sendSmartFanData(float temperature, int fanSpeed, float voltage, float current, float watt, float kwh);
     void sendMessage(String title, String body);
     void sendMessageToAll(String title, String body);
     void resetWiFiSettings();
