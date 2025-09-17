@@ -194,7 +194,6 @@
 - **🛡️ Protection**: Automatic overload cutoff
 - **📏 Module Size**: ~5.7x2.85cm (2.24x1.12in)
 - **🧠 Logic Level**: 3.3V/5V compatible
-
 ---
 
 ## 🛠️ Installation
