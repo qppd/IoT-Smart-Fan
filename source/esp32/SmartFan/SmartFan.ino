@@ -6,6 +6,7 @@
 #include "VOLTAGESensor.h"
 #include "BUZZERConfig.h"
 #include "TRIACModule.h"
+#include "ESPCommunication.h"
 
 
 
@@ -29,6 +30,9 @@ BUZZERConfig buzzer(BUZZER_PIN);
 // TRIACModule object for PWM control
 TRIACModule triac(TRIAC_PIN, ZERO_CROSS_PIN);
 
+// ESP Communication object for talking to ESP8266
+ESPCommunication espComm(ESP_SERIAL_RX, ESP_SERIAL_TX);
+
 void setup()
 {
     Serial.begin(115200);
@@ -41,7 +45,14 @@ void setup()
     // TRIACModule setup
     triac.begin();
     
+    // ESP Communication setup
+    espComm.begin(9600);
+    
     Serial.println("Smart Fan System Initialized");
+    
+    // Test communication (comment out after testing)
+    delay(2000); // Wait for ESP8266 to initialize
+    testESP32Communication();
 }
 
 void loop()
@@ -110,6 +121,50 @@ void loop()
     Serial.print(" kWh, Fan Speed: ");
     Serial.print(fanSpeed);
     Serial.println(" %");
+    
+    // Microtask: Send sensor data to ESP8266
+    static unsigned long lastCommTime = 0;
+    if (millis() - lastCommTime > 5000) { // Send data every 5 seconds
+        espComm.sendSensorData(temperature, humidity, voltage, current);
+        espComm.sendFanSpeed(fanSpeed);
+        lastCommTime = millis();
+    }
+    
+    // Microtask: Process incoming commands from ESP8266
+    espComm.processIncomingData();
 
     delay(2000); // Read every 2 seconds
+}
+
+// Test function for ESP32 communication
+void testESP32Communication() {
+    Serial.println("=== ESP32 Communication Test ===");
+    
+    // Send test messages
+    espComm.sendData("TEST:ESP32_HELLO");
+    delay(500);
+    espComm.sendTemperature(25.5);
+    delay(500);
+    espComm.sendFanSpeed(75);
+    delay(500);
+    espComm.sendSensorData(26.0, 65.0, 220.0, 0.8);
+    delay(500);
+    
+    Serial.println("Test messages sent. Check ESP8266 serial monitor for received data.");
+    
+    // Check for responses
+    unsigned long testStart = millis();
+    Serial.println("Waiting for ESP8266 response...");
+    while (millis() - testStart < 5000) { // Wait 5 seconds for response
+        if (espComm.isDataAvailable()) {
+            String response = espComm.receiveData();
+            if (response.length() > 0) {
+                Serial.println("ESP8266 responded: " + response);
+                break;
+            }
+        }
+        delay(100);
+    }
+    
+    Serial.println("=== ESP32 Communication Test Complete ===");
 }

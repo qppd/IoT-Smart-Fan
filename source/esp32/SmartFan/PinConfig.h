@@ -14,4 +14,8 @@
 #define ZERO_CROSS_PIN 2       // Zero cross detection pin for TRIAC dimming
 #define WIFI_RESET_PIN 0       // WiFi reset button pin (boot button)
 
+// Serial communication pins for inter-board communication
+#define ESP_SERIAL_RX 16       // Hardware Serial RX pin for ESP8266 communication
+#define ESP_SERIAL_TX 17       // Hardware Serial TX pin for ESP8266 communication
+
 #endif // PINCONFIG_H

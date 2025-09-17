@@ -2,8 +2,12 @@
 #define FIREBASE_CONFIG_H
 
 #include <ESP8266WiFi.h>
-#include <FirebaseESP8266.h>
+#include <Firebase_ESP_Client.h>
+#include "addons/TokenHelper.h"
+#include "addons/RTDBHelper.h"
 #include "firebase_credentials.h"
+
+#define MAX_TOKENS 10  // Maximum number of device tokens to store
 
 class FirebaseManager {
 public:
@@ -11,10 +15,35 @@ public:
     void begin();
     void updateDeviceCurrent(const String& deviceId, float temperature, int fanSpeed, const String& mode, unsigned long lastUpdate, float voltage, float current, float watt, float kwh);
     void logDeviceData(const String& deviceId, unsigned long timestamp, float temperature, int fanSpeed, float voltage, float current, float watt, float kwh);
+    void sendSmartFanData(int bottle_large, int bottle_small, int bin_level, int total_rewards, int total_weight, int coin_stock);
+    void sendMessage(String title, String body);
+    void sendMessageToAll(String title, String body);
     void resetWiFiSettings();
     bool isReady();
+    
+    // Public Firebase objects for callbacks
+    FirebaseData fbdo;
+    FirebaseData tokenStream;
+    
 private:
-    FirebaseData _fbdo;
+    FirebaseAuth auth;
+    FirebaseConfig config;
+    
+    // Device token management
+    String deviceTokens[MAX_TOKENS];
+    int tokenCount;
+    
+    // Stream configuration
+    String tokenParentPath;
+    String tokenPaths[1];
+    
+    // Internal methods
+    void initializeTokenStream();
+    static void tokenStreamCallback(MultiPathStream stream);
+    static void tokenStreamTimeoutCallback(bool timeout);
 };
+
+// Global instance for callback access
+extern FirebaseManager* globalFirebaseManager;
 
 #endif // FIREBASE_CONFIG_H

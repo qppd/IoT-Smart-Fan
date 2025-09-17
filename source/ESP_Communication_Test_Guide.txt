@@ -1,0 +1,110 @@
+/*
+ * ESP32 and ESP8266 Serial Communication Test
+ * 
+ * This file contains test functions to verify bidirectional communication
+ * between ESP32 (using HardwareSerial on GPIO16/17) and ESP8266 (using SoftwareSerial on D6/D7)
+ * 
+ * Wiring:
+ * ESP32 GPIO16 (RX) <-> ESP8266 D7 (TX)
+ * ESP32 GPIO17 (TX) <-> ESP8266 D6 (RX)
+ * ESP32 GND <-> ESP8266 GND
+ * 
+ * Note: Make sure both boards share a common ground!
+ */
+
+// Test function for ESP32 - Add this to your ESP32 SmartFan.ino setup() function
+void testESP32Communication() {
+    Serial.println("=== ESP32 Communication Test ===");
+    
+    // Send test messages
+    espComm.sendData("TEST:ESP32_HELLO");
+    delay(500);
+    espComm.sendTemperature(25.5);
+    delay(500);
+    espComm.sendFanSpeed(75);
+    delay(500);
+    espComm.sendSensorData(26.0, 65.0, 220.0, 0.8);
+    delay(500);
+    
+    Serial.println("Test messages sent. Check ESP8266 serial monitor for received data.");
+    
+    // Check for responses
+    unsigned long testStart = millis();
+    Serial.println("Waiting for ESP8266 response...");
+    while (millis() - testStart < 5000) { // Wait 5 seconds for response
+        if (espComm.isDataAvailable()) {
+            String response = espComm.receiveData();
+            if (response.length() > 0) {
+                Serial.println("ESP8266 responded: " + response);
+                break;
+            }
+        }
+        delay(100);
+    }
+    
+    Serial.println("=== ESP32 Communication Test Complete ===");
+}
+
+// Test function for ESP8266 - Add this to your ESP8266 SmartFan.ino setup() function
+void testESP8266Communication() {
+    Serial.println("=== ESP8266 Communication Test ===");
+    
+    // Send test messages
+    espComm.sendData("TEST:ESP8266_HELLO");
+    delay(500);
+    espComm.sendCommand("GET_STATUS");
+    delay(500);
+    espComm.sendFirebaseStatus("CONNECTED");
+    delay(500);
+    espComm.setFanSpeed(50);
+    delay(500);
+    
+    Serial.println("Test messages sent. Check ESP32 serial monitor for received data.");
+    
+    // Check for responses
+    unsigned long testStart = millis();
+    Serial.println("Waiting for ESP32 response...");
+    while (millis() - testStart < 5000) { // Wait 5 seconds for response
+        if (espComm.isDataAvailable()) {
+            String response = espComm.receiveData();
+            if (response.length() > 0) {
+                Serial.println("ESP32 responded: " + response);
+                break;
+            }
+        }
+        delay(100);
+    }
+    
+    Serial.println("=== ESP8266 Communication Test Complete ===");
+}
+
+/*
+ * Troubleshooting Tips:
+ * 
+ * 1. Check Wiring:
+ *    - ESP32 GPIO16 (RX) -> ESP8266 D7 (TX)
+ *    - ESP32 GPIO17 (TX) -> ESP8266 D6 (RX)
+ *    - Common ground connection
+ * 
+ * 2. Baud Rate:
+ *    - Both boards should use the same baud rate (9600)
+ *    - If communication fails, try lower baud rates (4800, 2400)
+ * 
+ * 3. Pin Conflicts:
+ *    - Make sure D6 and D7 are not used for other purposes on ESP8266
+ *    - GPIO16 and GPIO17 should be free on ESP32
+ * 
+ * 4. Power Issues:
+ *    - Ensure both boards have stable power supply
+ *    - USB power might not be sufficient for both boards
+ * 
+ * 5. Software Serial Limitations:
+ *    - SoftwareSerial on ESP8266 is not as reliable as HardwareSerial
+ *    - Keep messages short and add delays between transmissions
+ * 
+ * 6. Testing Steps:
+ *    - Upload code to both boards
+ *    - Open serial monitor for both boards (separate COM ports)
+ *    - Reset both boards and observe the test output
+ *    - You should see sent/received messages on both monitors
+ */
