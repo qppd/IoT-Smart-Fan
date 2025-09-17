@@ -3,8 +3,6 @@
 
 #include <ESP8266WiFi.h>
 #include <Firebase_ESP_Client.h>
-#include "addons/TokenHelper.h"
-#include "addons/RTDBHelper.h"
 #include "firebase_credentials.h"
 
 #define MAX_TOKENS 10  // Maximum number of device tokens to store
