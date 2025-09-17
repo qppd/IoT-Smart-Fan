@@ -1,0 +1,65 @@
+plugins {
+    id 'com.android.application'
+    id 'com.google.gms.google-services'
+}
+
+android {
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.qppd.smartfan"
+        minSdk 23
+        targetSdk 32
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+
+    implementation 'com.google.firebase:firebase-database:22.0.0'
+    implementation 'com.google.firebase:firebase-auth:22.1.2'
+    implementation 'com.google.firebase:firebase-messaging:23.4.0'
+
+    implementation 'com.github.anastr:speedviewlib:1.6.1'
+    
+    // For bottom navigation and improved UI
+    implementation 'androidx.navigation:navigation-fragment:2.7.2'
+    implementation 'androidx.navigation:navigation-ui:2.7.2'
+    
+    // For charts and data visualization
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+    
+    // For animations and transitions
+    implementation 'com.airbnb.android:lottie:6.1.0'
+    
+    // For image loading and processing
+    implementation 'com.github.bumptech.glide:glide:4.15.1'
+    
+    // For splash screen API
+    implementation 'androidx.core:core-splashscreen:1.0.1'
+    
+    // For preference handling
+    implementation 'androidx.preference:preference:1.2.1'
+
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}

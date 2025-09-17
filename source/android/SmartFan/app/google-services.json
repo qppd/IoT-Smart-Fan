@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "470059794027",
+    "project_id": "smartfan-e96f1",
+    "storage_bucket": "smartfan-e96f1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:470059794027:android:c67c5166ac8dc7bd7abb2e",
+        "android_client_info": {
+          "package_name": "com.qppd.smartfan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWcQrmmclYeWihlTsjuha9ujL1o3RatuE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

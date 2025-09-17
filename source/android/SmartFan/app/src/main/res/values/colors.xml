@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Modern IoT Color Palette -->
+    <!-- Primary: Cool blue/teal for trust/technology -->
+    <color name="primary">#1E88E5</color>
+    <color name="primary_blue">#1E88E5</color>
+    <color name="primary_blue_dark">#1565C0</color>
+    <color name="primary_blue_light">#42A5F5</color>
+    
+    <!-- Secondary: Warm orange for fan/airflow -->
+    <color name="secondary_orange">#FB8C00</color>
+    <color name="secondary_orange_dark">#E65100</color>
+    <color name="secondary_orange_light">#FFB74D</color>
+    
+    <!-- Neutral: Shades of gray for readability -->
+    <color name="text_primary">#212121</color>
+    <color name="neutral_dark">#212121</color>
+    <color name="neutral_medium">#757575</color>
+    <color name="neutral_light">#FAFAFA</color>
+    <color name="neutral_white">#FFFFFF</color>
+    
+    <!-- Accent colors -->
+    <color name="accent_green">#43A047</color>  <!-- Success/Active -->
+    <color name="accent_red">#E53935</color>    <!-- Warnings/Errors -->
+    <color name="accent_yellow">#FDD835</color>  <!-- Caution -->
+    <color name="accent_blue">#1E88E5</color>    <!-- Information/Normal -->
+    
+    <!-- Legacy colors for compatibility -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- Temperature gradient colors -->
+    <color name="temp_cold">#2196F3</color>     <!-- Blue for cold -->
+    <color name="temp_cool">#4CAF50</color>     <!-- Green for cool -->
+    <color name="temp_warm">#FF9800</color>     <!-- Orange for warm -->
+    <color name="temp_hot">#F44336</color>      <!-- Red for hot -->
+    
+    <!-- Card backgrounds -->
+    <color name="card_background_light">#FFFFFF</color>
+    <color name="card_background_dark">#2C2C2C</color>
+    <color name="background_color">#FAFAFA</color>
+    
+    <!-- Status colors -->
+    <color name="status_online">#4CAF50</color>
+    <color name="status_offline">#9E9E9E</color>
+    <color name="status_warning">#FF9800</color>
+    <color name="status_error">#F44336</color>
+</resources>

@@ -1,0 +1,67 @@
+<resources>
+    <string name="app_name">SmartFan</string>
+    <string name="app_logo">SmartFan Logo</string>
+    
+    <!-- Navigation -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_history">History</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_profile">Profile</string>
+    
+    <!-- Dashboard -->
+    <string name="dashboard_welcome">Welcome to SmartFan</string>
+    <string name="dashboard_temperature">Temperature</string>
+    <string name="dashboard_fan_status">Fan Status</string>
+    <string name="dashboard_auto_mode">Auto Mode</string>
+    <string name="dashboard_manual_mode">Manual Mode</string>
+    <string name="dashboard_fan_speed">Fan Speed</string>
+    <string name="dashboard_device_online">Device Online</string>
+    <string name="dashboard_device_offline">Device Offline</string>
+    
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_theme">Appearance</string>
+    <string name="settings_dark_mode">Dark Mode</string>
+    <string name="settings_temperature_thresholds">Temperature Thresholds</string>
+    <string name="settings_min_temp">Minimum Temperature (°C)</string>
+    <string name="settings_max_temp">Maximum Temperature (°C)</string>
+    <string name="settings_device_management">Device Management</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_about">About</string>
+    
+    <!-- History -->
+    <string name="history_title">Temperature &amp; Fan History</string>
+    <string name="history_filter">Filter</string>
+    <string name="history_last_24h">Last 24 Hours</string>
+    <string name="history_last_7_days">Last 7 Days</string>
+    <string name="history_last_30_days">Last 30 Days</string>
+    <string name="history_export">Export Data</string>
+    
+    <!-- Device Management -->
+    <string name="device_management_title">Your Devices</string>
+    <string name="device_rename">Rename Device</string>
+    <string name="device_unlink">Unlink Device</string>
+    <string name="device_new_name">New Device Name</string>
+    
+    <!-- Dialogs -->
+    <string name="dialog_confirm">Confirm</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_yes">Yes</string>
+    <string name="dialog_no">No</string>
+    <string name="dialog_enable_auto_mode">Enable automatic fan control?</string>
+    <string name="dialog_unlink_device">Are you sure you want to unlink this device?</string>
+    <string name="dialog_logout">Are you sure you want to logout?</string>
+    
+    <!-- Messages -->
+    <string name="message_device_updated">Device settings updated</string>
+    <string name="message_fan_speed_updated">Fan speed updated</string>
+    <string name="message_settings_saved">Settings saved successfully</string>
+    <string name="message_device_renamed">Device renamed successfully</string>
+    <string name="message_device_unlinked">Device unlinked successfully</string>
+    <string name="message_temperature_exceeded">Temperature exceeded safe limit!</string>
+    
+    <!-- Accessibility -->
+    <string name="content_desc_temperature_gauge">Temperature gauge showing current temperature</string>
+    <string name="content_desc_fan_speed_slider">Fan speed control slider</string>
+    <string name="content_desc_auto_mode_switch">Toggle automatic fan control</string>
+</resources>

@@ -1,0 +1,33 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    
+    <group
+        android:pivotX="12"
+        android:pivotY="12">
+        
+        <!-- Fan blades -->
+        <path
+            android:fillColor="@color/secondary_orange"
+            android:pathData="M12,2C13.1,2 14,2.9 14,4V8C14,9.1 13.1,10 12,10C10.9,10 10,9.1 10,8V4C10,2.9 10.9,2 12,2Z"/>
+        
+        <path
+            android:fillColor="@color/secondary_orange"
+            android:pathData="M22,12C22,13.1 21.1,14 20,14H16C14.9,14 14,13.1 14,12C14,10.9 14.9,10 16,10H20C21.1,10 22,10.9 22,12Z"/>
+        
+        <path
+            android:fillColor="@color/secondary_orange"
+            android:pathData="M12,22C10.9,22 10,21.1 10,20V16C10,14.9 10.9,14 12,14C13.1,14 14,14.9 14,16V20C14,21.1 13.1,22 12,22Z"/>
+        
+        <path
+            android:fillColor="@color/secondary_orange"
+            android:pathData="M2,12C2,10.9 2.9,10 4,10H8C9.1,10 10,10.9 10,12C10,13.1 9.1,14 8,14H4C2.9,14 2,13.1 2,12Z"/>
+        
+        <!-- Center circle -->
+        <path
+            android:fillColor="@color/primary_blue"
+            android:pathData="M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10Z"/>
+    </group>
+</vector>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DesignSurface">
+    <option name="filePathToZoomLevelMap">
+      <map>
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/drawable-v24/ic_launcher_foreground.xml" value="0.172" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/drawable/ic_auto_mode.xml" value="0.172" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/drawable/ic_check_circle.xml" value="0.172" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/drawable/ic_dashboard.xml" value="0.172" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/drawable/ic_device_online.xml" value="0.172" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/drawable/ic_fan.xml" value="0.172" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/drawable/ic_fan_logo.xml" value="0.172" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/drawable/ic_history.xml" value="0.172" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/drawable/ic_launcher_background.xml" value="0.172" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/drawable/ic_profile.xml" value="0.172" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/drawable/ic_settings.xml" value="0.172" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/drawable/ic_temperature.xml" value="0.172" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/drawable/splash_background.xml" value="0.172" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/layout/activity_device_link.xml" value="0.17239583333333333" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/layout/activity_device_management.xml" value="0.17239583333333333" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/layout/activity_history.xml" value="0.17239583333333333" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/layout/activity_login.xml" value="0.17239583333333333" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/layout/activity_main.xml" value="0.17239583333333333" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/layout/activity_register.xml" value="0.17239583333333333" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/layout/activity_settings.xml" value="0.17239583333333333" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/layout/activity_splash.xml" value="0.17239583333333333" />
+        <entry key="..\:/Users/sajed/AndroidStudioProjects/SmartFan/app/src/main/res/layout/dashboard_gauge.xml" value="0.17239583333333333" />
+        <entry key="..\:/Users/sajed/Desktop/CURRENT PROJECTS/SMART FAN/source/android/SmartFan/app/src/main/res/drawable/ic_wifi_setup.xml" value="0.1" />
+        <entry key="..\:/Users/sajed/Desktop/CURRENT PROJECTS/SMART FAN/source/android/SmartFan/app/src/main/res/layout/activity_device_link.xml" value="0.1" />
+      </map>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" default="true" project-jdk-name="Android Studio default JDK" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/build/classes" />
+  </component>
+  <component name="ProjectType">
+    <option name="id" value="Android" />
+  </component>
+</project>
