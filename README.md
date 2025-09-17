@@ -1,4 +1,5 @@
 
+
 # 🌪️ SmartFan: IoT Stand Fan Automation & Android App
 
 <div align="center">
@@ -8,7 +9,8 @@
 ![Android](https://img.shields.io/badge/Android-App-brightgreen?style=for-the-badge&logo=android)
 ![Firebase](https://img.shields.io/badge/Firebase-Powered-orange?style=for-the-badge&logo=firebase)
 
-**🔥 Complete IoT solution for intelligent fan automation with real-time monitoring**
+
+**🔥 Complete IoT solution for intelligent fan automation, real-time monitoring, and mobile control**
 
 [📱 Features](#-features) • [⚡ Quick Start](#-quick-start) • [🛠️ Installation](#️-installation) • [📖 Documentation](#-documentation)
 
@@ -18,145 +20,162 @@
 
 ## 🎯 Overview
 
-**SmartFan** is a comprehensive IoT ecosystem that transforms any standard stand fan into an intelligent, automated climate control system. Built with a **dual-ESP architecture** featuring ESP8266 and ESP32 microcontrollers working in tandem, plus a modern Android companion app, it delivers seamless temperature-based automation, real-time monitoring, and cloud integration.
+
+**SmartFan** is a comprehensive IoT ecosystem that transforms any standard stand fan into an intelligent, automated climate control system. Built with a **dual-ESP architecture** (ESP8266 + ESP32) and a modern Android app, it delivers seamless temperature-based automation, real-time monitoring, and cloud integration.
+
 
 ### 🏗️ Dual-ESP Architecture
 
-- **🌐 ESP8266**: WiFi Manager + Firebase Handler - Manages wireless connectivity, cloud database operations, and mobile app notifications
-- **🧠 ESP32**: Sensor Reader + Hardware Controller - Handles all sensors (DHT22, ACS712, ZMPT101B), TRIAC fan control, and hardware safety monitoring
-- **📡 Serial Communication**: Custom protocol for real-time data exchange between microcontrollers at 9600 baud
+- **🌐 ESP8266**: WiFi Manager + Firebase Handler — Manages WiFi, cloud database, and push notifications
+- **🧠 ESP32**: Sensor Reader + Hardware Controller — Handles DHT22, ACS712, ZMPT101B, TRIAC fan control, and safety monitoring
+- **📡 Serial Communication**: Custom protocol for real-time data exchange between microcontrollers at 9600 baud (ESP8266: SoftwareSerial, ESP32: HardwareSerial2)
+
 
 ### 🔥 Key Highlights
 
-- **🤖 Intelligent Automation**: Temperature-based fan speed control with automatic/manual modes
-- **📊 Real-time Monitoring**: Live temperature, humidity, voltage, current, and power consumption tracking
-- **🏗️ Dual-ESP Architecture**: ESP8266 (WiFi/Firebase) + ESP32 (Sensors/Hardware) for robust performance
-- **📡 Inter-ESP Communication**: Custom serial protocol for seamless data exchange and command handling
-- **📱 Modern Android App**: Material Design 3 with animated gauges and intuitive controls
-- **☁️ Cloud Integration**: Firebase backend for data logging, user authentication, and remote control
-- **🔧 Easy Setup**: WiFiManager integration with captive portal configuration
-- **⚡ Power Monitoring**: Comprehensive electrical monitoring with safety alerts (ACS712 + ZMPT101B)
-- **🔔 Smart Notifications**: Push notifications for temperature alerts and system status
+- **🤖 Intelligent Automation**: Temperature-based fan speed control (auto/manual)
+- **📊 Real-time Monitoring**: Live temperature, humidity, voltage, current, power, and energy tracking
+- **🏗️ Modular Dual-ESP**: ESP8266 (WiFi/Firebase) + ESP32 (Sensors/Hardware)
+- **📡 Robust Serial Protocol**: Reliable, fault-tolerant inter-ESP communication
+- **📱 Modern Android App**: Material Design 3, animated gauges, power analytics, device management
+- **☁️ Cloud Integration**: Firebase for data logging, user authentication, remote control, and push notifications
+- **🔧 Easy Setup**: WiFiManager captive portal, app-based WiFi config, and hardware reset
+- **⚡ Power Monitoring**: ACS712 (current), ZMPT101B (voltage), with safety alerts and analytics
+- **🔔 Smart Notifications**: Push notifications for temperature/power alerts and system status
 
 ---
+
 
 ## 📋 Recent Updates (September 2025)
 
+
 ### 🔧 TRIACModule PWM Integration
-- ✨ **New Hardware Control**: Added `TRIACModule.h` and `TRIACModule.cpp` for precision PWM-based TRIAC control
-- 🎯 **Phase Angle Control**: Software-based phase angle control for universal motor fans
-- 🧩 **Modular Architecture**: Fully integrated into `SmartFan.ino` with testable, maintainable design
-- 📈 **Performance Testing**: Validated power sweep from 0% to 100% with interrupt-driven timing
-- 🔄 **RobotDyn Compatibility**: Adapted RobotDyn Dimmer library for ESP32 and modular C++
+- ✨ **New Hardware Control**: `TRIACModule` for precision phase angle control (universal motor fans)
+- 🧩 **Modular C++**: Clean, testable, and maintainable design
+- 📈 **Performance**: Power sweep 0–100% validated, interrupt-driven zero-cross detection
+- 🔄 **RobotDyn Compatible**: Adapted for ESP32, modular and extensible
+
 
 ### 📶 WiFi Management Enhancements
-- 🌐 **WiFiManager Integration**: Dynamic WiFi configuration using captive portal
-- 📱 **Android WiFi Setup**: Configure device WiFi directly through the companion app
-- 🔄 **WiFi Reset Capability**: Hardware button reset for WiFi settings
-- 🚪 **Captive Portal**: Easy first-time device configuration at 192.168.4.1
+- 🌐 **WiFiManager**: Captive portal for first-time setup and reconfiguration
+- 📱 **App WiFi Setup**: Configure device WiFi via Android app
+- 🔄 **Hardware Reset**: Button for WiFi reset (hold 3s)
+
 
 ### ⚡ Power Monitoring System
-- 📊 **Comprehensive Monitoring**: Real-time voltage, current, power, and energy consumption tracking
-- 🚨 **Safety Alerts**: Automatic notifications for high power consumption
-- 📈 **Energy Analytics**: kWh tracking with historical data logging
-- 🎨 **Enhanced UI**: Color-coded status indicators and responsive Material Design cards
+- 📊 **Comprehensive Monitoring**: Real-time voltage, current, power (W), and energy (kWh)
+- 🚨 **Safety Alerts**: Notifications for high power, overcurrent, and abnormal voltage
+- 📈 **Analytics**: kWh tracking, historical logs, and color-coded UI
 
 ---
 
+
 ## 📡 Dual-ESP Communication Architecture
+
 
 ### 🏗️ System Architecture Overview
 
 The SmartFan system utilizes a specialized dual-ESP architecture where two microcontrollers work together via serial communication to provide robust, fault-tolerant operation:
 
+
 **ESP8266 (WiFi & Firebase Module):**
-- ✅ WiFi connection management with captive portal setup
-- ✅ Firebase database operations and real-time synchronization  
-- ✅ Mobile app push notifications via Firebase Cloud Messaging
-- ✅ Data logging and analytics processing
-- ✅ Remote control command handling from mobile app
-- ✅ WiFi reset functionality (3-second hold button)
+- WiFi connection management (captive portal, app-based config)
+- Firebase database operations and real-time sync
+- Push notifications via Firebase Cloud Messaging
+- Data logging, analytics, and remote command handling
+- WiFi reset (hardware button, 3s hold)
+
 
 **ESP32 (Sensor & Hardware Module):**
-- ✅ DHT22 temperature/humidity sensor monitoring
-- ✅ ACS712 current sensor with calibrated RMS calculations
-- ✅ ZMPT101B voltage sensor with true RMS measurement
-- ✅ TRIAC fan speed control with phase angle modulation
-- ✅ Piezo buzzer alerts for temperature thresholds
-- ✅ Automatic temperature-based fan control logic
-- ✅ Hardware safety monitoring and error detection
+- DHT22: Temperature/humidity sensor
+- ACS712: Current sensor (RMS, calibrated)
+- ZMPT101B: Voltage sensor (true RMS)
+- TRIAC: Fan speed control (phase angle, PWM)
+- Piezo buzzer: Alerts for over-temperature
+- Automatic/manual fan control logic
+- Hardware safety monitoring and error detection
+
 
 ### 🔌 Hardware Communication Setup
 
+
 **Serial Connection:**
-- **Baud Rate**: 9600 bps for reliable communication
-- **ESP8266 Side**: D6 (RX) ↔ D7 (TX) using SoftwareSerial
-- **ESP32 Side**: GPIO16 (RX) ↔ GPIO17 (TX) using HardwareSerial2
+- **Baud Rate**: 9600 bps
+- **ESP8266**: D6 (RX), D7 (TX) — SoftwareSerial
+- **ESP32**: GPIO16 (RX), GPIO17 (TX) — HardwareSerial2
 - **Wiring**: ESP8266 TX (D7) → ESP32 RX (GPIO16), ESP8266 RX (D6) → ESP32 TX (GPIO17)
-- **Power**: Both ESP boards require separate power supplies with common ground
+- **Power**: Separate 3.3V/5V supplies, common ground
+
 
 ### 📨 Communication Protocol
 
-**Message Format:** `<TYPE:DATA>` with delimiters for reliable parsing
+
+**Message Format:** `<TYPE:DATA>` (delimited, robust parsing)
+
 
 **ESP32 → ESP8266 (Sensor Data):**
 ```
-<TEMP:25.5>     - Temperature reading (°C)
-<HUMID:65.0>    - Humidity reading (%)  
-<VOLT:220.0>    - Voltage reading (V)
-<CURR:0.8>      - Current reading (A)
-<FAN:75>        - Current fan speed (0-100%)
-<BUZZ:ON>       - Buzzer status
-<STATUS:RUNNING> - System operational status
-<ALL:25.5,65.0,220.0,0.8,75> - Combined sensor data
+<TEMP:25.5>     // Temperature (°C)
+<HUMID:65.0>    // Humidity (%)  
+<VOLT:220.0>    // Voltage (V)
+<CURR:0.8>      // Current (A)
+<FAN:75>        // Fan speed (0-100%)
+<BUZZ:ON>       // Buzzer status
+<STATUS:RUNNING> // System status
+<ALL:25.5,65.0,220.0,0.8,75> // Combined data
 ```
+
 
 **ESP8266 → ESP32 (Commands):**
 ```
-<CMD:GET_SENSORS>     - Request fresh sensor readings
-<CMD:GET_STATUS>      - System health check request
-<SET_FAN:50>         - Set fan speed to 50%
-<SET_TEMP:28.0>      - Set target temperature to 28°C
-<FIREBASE:CONNECTED> - Firebase connection status
-<WIFI:CONNECTED>     - WiFi connection status
-<BUZZ:ALERT>         - Trigger emergency buzzer alert
+<CMD:GET_SENSORS>     // Request sensor readings
+<CMD:GET_STATUS>      // Health check
+<SET_FAN:50>          // Set fan speed
+<SET_TEMP:28.0>       // Set target temperature
+<FIREBASE:CONNECTED>  // Firebase status
+<WIFI:CONNECTED>      // WiFi status
+<BUZZ:ALERT>          // Trigger buzzer
 ```
+
 
 ### 🔄 Data Flow & Timing
 
+
 **Normal Operation Cycle:**
-1. **ESP32** reads all sensors every 2 seconds
-2. **ESP32** sends combined sensor data to ESP8266 every 5 seconds  
-3. **ESP8266** processes data and syncs to Firebase every 5 seconds
-4. **ESP8266** sends status notifications every 30 seconds
-5. **ESP8266** requests fresh data from ESP32 every 3 seconds
+1. **ESP32**: Reads sensors every 2s, sends data every 5s
+2. **ESP8266**: Syncs to Firebase every 5s, sends notifications every 30s, requests data every 3s
+
 
 **Remote Command Flow:**
-1. **Mobile App/Firebase** → **ESP8266** receives control commands
-2. **ESP8266** → **ESP32** forwards hardware control commands
-3. **ESP32** executes fan speed changes or alert triggers
-4. **ESP32** → **ESP8266** confirms successful command execution
-5. **ESP8266** → **Firebase** logs command execution for tracking
+1. **App/Firebase** → **ESP8266**: Receives commands
+2. **ESP8266** → **ESP32**: Forwards hardware commands
+3. **ESP32**: Executes, confirms, and reports
+4. **ESP8266**: Logs to Firebase
+
 
 ### 🛡️ Safety & Error Handling
 
+
 **Communication Safeguards:**
-- **Timeout Detection**: 1-second message timeout with retry logic
-- **Connection Health**: Regular ping/pong communication tests
-- **Fallback Mode**: ESP32 continues autonomous operation with last known settings
-- **Error Alerts**: ESP8266 notifies Firebase of any communication issues
+- Timeout detection (1s, retry logic)
+- Connection health checks (ping/pong)
+- Fallback: ESP32 runs autonomously if comms lost
+- Error alerts: ESP8266 notifies Firebase
+
 
 **Sensor Validation:**
-- **Range Checking**: Validates sensor readings are within expected ranges
-- **NaN Detection**: Filters out invalid/corrupted sensor readings
-- **Error Reporting**: ESP32 sends error status messages to ESP8266
-- **Safe Defaults**: System continues with safe fallback values during errors
+- Range checking, NaN filtering
+- ESP32 sends error status to ESP8266
+- Safe fallback values on error
 
 ---
 
+
 ## 🚀 Features
 
-### � ESP32 Hardware Controller
+
+### 🧠 ESP32 Hardware Controller
+
 
 <details>
 <summary><b>🌡️ Intelligent Climate Control</b></summary>
@@ -168,7 +187,9 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 - **🎵 Audio Alerts**: Piezo buzzer notifications for over-temperature conditions (+3°C threshold)
 - **🔄 Auto/Manual Modes**: Automatic temperature control or manual fan speed override
 
+
 </details>
+
 
 <details>
 <summary><b>⚡ Power Monitoring & Safety</b></summary>
@@ -179,7 +200,9 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 - **🔍 RMS Calculation**: True RMS measurement with calibrated sampling (100 samples)
 - **📋 Error Handling**: Safe fallback values and error status reporting to ESP8266
 
+
 </details>
+
 
 <details>
 <summary><b>📡 Inter-ESP Communication</b></summary>
@@ -190,9 +213,12 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 - **🔄 Health Monitoring**: Connection status and communication timeout handling
 - **⏰ Timing Management**: 2-second sensor reads, 5-second data transmission
 
+
 </details>
 
+
 ### 🌐 ESP8266 WiFi & Firebase Manager
+
 
 <details>
 <summary><b>🌐 Connectivity & Configuration</b></summary>
@@ -203,7 +229,9 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 - **🔧 Hardware Reset**: Physical button WiFi reset capability (3-second hold)
 - **📡 Access Point Mode**: Automatic fallback for configuration
 
+
 </details>
+
 
 <details>
 <summary><b>☁️ Cloud Integration & Notifications</b></summary>
@@ -214,7 +242,9 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 - **🎯 Remote Commands**: Processes fan speed and temperature commands from mobile app
 - **⏰ Notification Scheduling**: Status updates every 30 seconds, data sync every 5 seconds
 
+
 </details>
+
 
 <details>
 <summary><b>🏗️ Architecture & Development</b></summary>
@@ -225,9 +255,12 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 - **⚡ Non-blocking Operations**: Efficient multitasking without interference
 - **🎛️ Pin Configuration**: Centralized pin management through `PinConfig.h`
 
+
 </details>
 
+
 ### 📱 Android App Features
+
 
 <details>
 <summary><b>🔐 User Management & Security</b></summary>
@@ -238,7 +271,9 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 - **✅ Input Validation**: Comprehensive validation throughout the app
 - **👤 Account Management**: Profile management and secure logout
 
+
 </details>
+
 
 <details>
 <summary><b>📊 Real-time Dashboard</b></summary>
@@ -249,7 +284,9 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 - **📈 Status Indicators**: Color-coded power consumption status chips
 - **🔔 Live Alerts**: Real-time notifications for temperature and power thresholds
 
+
 </details>
+
 
 <details>
 <summary><b>🛠️ Device Management & Setup</b></summary>
@@ -260,7 +297,9 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 - **🔄 Connection Management**: Monitor device connectivity and status
 - **📋 Device History**: Access to device configuration and setup logs
 
+
 </details>
+
 
 <details>
 <summary><b>📈 Analytics & History</b></summary>
@@ -271,7 +310,9 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 - **📱 Enhanced Log View**: Custom RecyclerView with structured data display
 - **🎯 Conditional Display**: Backward compatibility with older data formats
 
+
 </details>
+
 
 <details>
 <summary><b>🎨 User Experience & Design</b></summary>
@@ -282,9 +323,12 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 - **🎯 Intuitive Navigation**: User-friendly interface with clear visual hierarchy
 - **🔔 Push Notifications**: Firebase Cloud Messaging for real-time alerts
 
+
 </details>
 
+
 ### 🌐 System Integration
+
 
 <details>
 <summary><b>☁️ Firebase Backend Services</b></summary>
@@ -295,41 +339,48 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 - **🛡️ Security Rules**: Role-based access control and data protection
 - **📈 Analytics**: Usage tracking and performance monitoring
 
+
 </details>
 
 ---
 
+
 ## ⚡ Quick Start
+
 
 ### 🔧 Hardware Setup
 
+
 **Required Microcontrollers:**
-- 🌐 **ESP8266 Microcontroller** (WiFi & Firebase Handler)
-- 🧠 **ESP32 Microcontroller** (Sensor & Hardware Controller)
+- 🌐 **ESP8266** (WiFi & Firebase)
+- 🧠 **ESP32** (Sensors & Hardware)
+
 
 **Sensors & Components:**
-- 🌡️ **DHT22 Temperature/Humidity Sensor** (ESP32 pin 4)
-- ⚡ **ACS712 Current Sensor** (5A, ESP32 pin 34)
-- 🔌 **ZMPT101B Voltage Sensor** (ESP32 pin 35)
-- 🔊 **Piezo Buzzer** (ESP32 pin 25)
-- 🎛️ **AC Light Dimming Module** (TRIAC, 8A-400V, ESP32 pin 12)
-- 🔋 **Power Supplies** (separate 5V/3.3V for each ESP board)
+- 🌡️ **DHT22** (GPIO4, ESP32)
+- ⚡ **ACS712** (GPIO34, ESP32)
+- 🔌 **ZMPT101B** (GPIO35, ESP32)
+- 🔊 **Piezo Buzzer** (GPIO25, ESP32)
+- 🎛️ **TRIAC Module** (GPIO12, ESP32)
+- 🔋 **Power Supplies** (separate 3.3V/5V for each ESP)
+
 
 **Inter-ESP Communication:**
-- **ESP8266 D6 (RX)** ↔ **ESP32 GPIO17 (TX)**
-- **ESP8266 D7 (TX)** ↔ **ESP32 GPIO16 (RX)**
-- **Common Ground** connection between both boards
+- ESP8266 D6 (RX) ↔ ESP32 GPIO17 (TX)
+- ESP8266 D7 (TX) ↔ ESP32 GPIO16 (RX)
+- Common ground
+
 
 **Additional Hardware:**
-- 📡 **Zero Cross Detection** (ESP32 pin 2) for TRIAC timing
-- 🔘 **WiFi Reset Button** (ESP8266 pin 0, 3-second hold)
+- 📡 **Zero Cross Detection** (GPIO2, ESP32)
+- 🔘 **WiFi Reset Button** (D3/GPIO0, ESP8266, 3s hold)
 
 ### 📊 Power Specifications
-- **🔌 Voltage Range**: 110V-400V AC
-- **⚡ Current Capacity**: Up to 8A load
-- **🛡️ Protection**: Automatic overload cutoff
-- **📏 Module Size**: ~5.7x2.85cm (2.24x1.12in)
-- **🧠 Logic Level**: 3.3V/5V compatible
+- **Voltage Range**: 110V–400V AC
+- **Current Capacity**: Up to 8A
+- **Protection**: Overload cutoff
+- **Module Size**: ~5.7x2.85cm
+- **Logic Level**: 3.3V/5V compatible
 ---
 
 ## 🛠️ Installation

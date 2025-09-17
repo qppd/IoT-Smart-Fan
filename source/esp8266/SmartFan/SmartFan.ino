@@ -28,7 +28,7 @@ unsigned long lastNotification = 0;
 unsigned long lastESP32Request = 0;
 unsigned long lastConnCheck = 0;
 const unsigned long DATA_SEND_INTERVAL = 5000;  // Send data every 5 seconds
-const unsigned long NOTIFICATION_INTERVAL = 30000; // Send notifications every 30 seconds
+const unsigned long NOTIFICATION_INTERVAL = 60000; // Send notifications every 30 seconds
 const unsigned long ESP32_REQUEST_INTERVAL = 3000;  // Request ESP32 data every 3 seconds
 const unsigned long CONN_CHECK_INTERVAL = 15000;   // Check ESP32 connection every 15 seconds
 
