@@ -9,27 +9,33 @@
 FirebaseManager firebaseManager;
 ESPCommunication espComm(ESP_SERIAL_RX, ESP_SERIAL_TX);
 
-// Smart Fan data variables
+// Smart Fan data variables - now populated from ESP32
 struct SmartFanData {
     float temperature = 25.0;
+    float humidity = 50.0;
     int fanSpeed = 128;
     float voltage = 220.0;
     float current = 0.5;
     float kwh = 0.01;
     String mode = "auto";
     String deviceId = "SmartFan_ESP8266_001";
+    bool esp32Connected = false;
 };
 
 SmartFanData fanData;
 unsigned long lastDataSend = 0;
 unsigned long lastNotification = 0;
+unsigned long lastESP32Request = 0;
+unsigned long lastConnCheck = 0;
 const unsigned long DATA_SEND_INTERVAL = 5000;  // Send data every 5 seconds
 const unsigned long NOTIFICATION_INTERVAL = 30000; // Send notifications every 30 seconds
+const unsigned long ESP32_REQUEST_INTERVAL = 3000;  // Request ESP32 data every 3 seconds
+const unsigned long CONN_CHECK_INTERVAL = 15000;   // Check ESP32 connection every 15 seconds
 
 void setup() {
     Serial.begin(115200);
     Serial.println();
-    Serial.println("=== Smart Fan ESP8266 with Firebase ===");
+    Serial.println("=== Smart Fan ESP8266 - Firebase & WiFi Manager ===");
     
     pinMode(WIFI_RESET_PIN, INPUT_PULLUP);
     
@@ -44,10 +50,10 @@ void setup() {
     
     // Send initial notification
     delay(2000);
-    firebaseManager.sendMessage("Smart Fan", "System started successfully! 🌟");
+    firebaseManager.sendMessage("Smart Fan", "ESP8266 WiFi/Firebase module started! 🌟");
     
     // Test communication with ESP32
-    delay(3000);
+    delay(1000);
     testESP8266Communication();
 }
 
@@ -55,13 +61,8 @@ void loop() {
     // Process incoming data from ESP32
     espComm.processIncomingData();
     
-    // Check for new sensor data from ESP32
-    if (espComm.isDataAvailable()) {
-        String receivedData = espComm.receiveData();
-        if (receivedData.length() > 0) {
-            parseReceivedData(receivedData);
-        }
-    }
+    // Update local data with ESP32 sensor readings
+    updateDataFromESP32();
     
     // Send data to Firebase periodically
     if (millis() - lastDataSend > DATA_SEND_INTERVAL) {
@@ -75,43 +76,72 @@ void loop() {
         lastNotification = millis();
     }
     
-    // Send status to ESP32 periodically
-    static unsigned long lastStatusTime = 0;
-    if (millis() - lastStatusTime > 10000) { // Send status every 10 seconds
-        espComm.sendFirebaseStatus("CONNECTED");
-        espComm.requestTemperature(); // Request fresh temperature data
-        lastStatusTime = millis();
+    // Request fresh data from ESP32 periodically
+    if (millis() - lastESP32Request > ESP32_REQUEST_INTERVAL) {
+        requestESP32Data();
+        lastESP32Request = millis();
     }
+    
+    // Check ESP32 connection health
+    if (millis() - lastConnCheck > CONN_CHECK_INTERVAL) {
+        checkESP32Connection();
+        lastConnCheck = millis();
+    }
+    
+    // Handle WiFi reset button
+    handleWiFiReset();
     
     delay(100); // Small delay to prevent watchdog reset
 }
 
-void parseReceivedData(String data) {
-    // Parse data received from ESP32
-    // Expected format: "TEMP:25.5" or "SPEED:128" etc.
-    if (data.startsWith("TEMP:")) {
-        fanData.temperature = data.substring(5).toFloat();
-        Serial.println("Updated temperature: " + String(fanData.temperature));
+void updateDataFromESP32() {
+    SensorData sensorData = espComm.getLastSensorData();
+    
+    // Update fan data if ESP32 data is fresh (within 10 seconds)
+    if (espComm.isDataFresh(10000)) {
+        fanData.temperature = sensorData.temperature;
+        fanData.humidity = sensorData.humidity;
+        fanData.voltage = sensorData.voltage;
+        fanData.current = sensorData.current;
+        fanData.fanSpeed = sensorData.fanSpeed;
+        fanData.esp32Connected = true;
+        
+        // Calculate kWh
+        static unsigned long lastKwhUpdate = 0;
+        if (lastKwhUpdate > 0) {
+            float hours = (millis() - lastKwhUpdate) / 3600000.0;
+            float watt = fanData.voltage * fanData.current;
+            fanData.kwh += (watt * hours) / 1000.0;
+        }
+        lastKwhUpdate = millis();
+    } else {
+        fanData.esp32Connected = false;
     }
-    else if (data.startsWith("SPEED:")) {
-        fanData.fanSpeed = data.substring(6).toInt();
-        Serial.println("Updated fan speed: " + String(fanData.fanSpeed));
+}
+
+void requestESP32Data() {
+    // Send status updates to ESP32
+    String firebaseStatus = firebaseManager.isReady() ? "CONNECTED" : "DISCONNECTED";
+    espComm.sendFirebaseStatus(firebaseStatus);
+    
+    // Send WiFi status
+    String wifiStatus = WiFi.status() == WL_CONNECTED ? "CONNECTED" : "DISCONNECTED";
+    espComm.sendWiFiStatus(wifiStatus);
+    
+    // Request fresh sensor data
+    espComm.requestAllSensors();
+}
+
+void checkESP32Connection() {
+    if (!fanData.esp32Connected) {
+        Serial.println("⚠️ ESP32 connection lost - sending alert");
+        if (firebaseManager.isReady()) {
+            firebaseManager.sendMessage("Smart Fan Alert", "ESP32 sensor module disconnected! ⚠️");
+        }
     }
-    else if (data.startsWith("VOLTAGE:")) {
-        fanData.voltage = data.substring(8).toFloat();
-        Serial.println("Updated voltage: " + String(fanData.voltage));
-    }
-    else if (data.startsWith("CURRENT:")) {
-        fanData.current = data.substring(8).toFloat();
-        Serial.println("Updated current: " + String(fanData.current));
-    }
-    else if (data.startsWith("MODE:")) {
-        fanData.mode = data.substring(5);
-        Serial.println("Updated mode: " + fanData.mode);
-    }
-    else {
-        Serial.println("ESP32 data: " + data);
-    }
+    
+    // Print communication status
+    espComm.printStatus();
 }
 
 void sendFirebaseData() {
@@ -150,8 +180,8 @@ void sendFirebaseData() {
     
     // Send PlasTech format data (for compatibility)
     int bottleLarge = map(fanData.fanSpeed, 0, 255, 0, 100);
-    int bottleSmall = map(fanData.temperature, 20, 40, 0, 50);
-    int binLevel = map(fanData.current, 0, 2, 0, 100);
+    int bottleSmall = map(int(fanData.temperature), 20, 40, 0, 50);
+    int binLevel = map(int(fanData.current * 100), 0, 200, 0, 100);
     int totalRewards = int(fanData.kwh * 10);
     int totalWeight = int(watt);
     int coinStock = 100;
@@ -165,17 +195,21 @@ void sendFirebaseData() {
         coinStock
     );
     
-    Serial.println("📊 Data sent to Firebase");
+    String connStatus = fanData.esp32Connected ? "🟢" : "🔴";
+    Serial.println("📊 Data sent to Firebase " + connStatus);
 }
 
 void sendStatusNotification() {
     if (!firebaseManager.isReady()) return;
     
+    String connStatus = fanData.esp32Connected ? "🟢 Connected" : "🔴 Disconnected";
     String statusMessage = "Smart Fan Status:\n";
     statusMessage += "🌡️ Temp: " + String(fanData.temperature, 1) + "°C\n";
+    statusMessage += "💧 Humidity: " + String(fanData.humidity, 1) + "%\n";
     statusMessage += "🌀 Speed: " + String(fanData.fanSpeed) + "\n";
     statusMessage += "⚡ Power: " + String(fanData.voltage * fanData.current, 1) + "W\n";
-    statusMessage += "🔧 Mode: " + fanData.mode;
+    statusMessage += "🔧 Mode: " + fanData.mode + "\n";
+    statusMessage += "📡 ESP32: " + connStatus;
     
     // Send to all registered devices
     firebaseManager.sendMessageToAll("Smart Fan Update", statusMessage);
@@ -183,35 +217,45 @@ void sendStatusNotification() {
     Serial.println("📱 Status notification sent");
 }
 
+void handleWiFiReset() {
+    if (digitalRead(WIFI_RESET_PIN) == LOW) {
+        static unsigned long resetStartTime = 0;
+        if (resetStartTime == 0) {
+            resetStartTime = millis();
+        }
+        
+        // If button held for 3 seconds, reset WiFi
+        if (millis() - resetStartTime > 3000) {
+            Serial.println("WiFi Reset requested!");
+            resetWiFi();
+            resetStartTime = 0;
+        }
+    } else {
+        // Button released
+        static unsigned long resetStartTime = 0;
+        resetStartTime = 0;
+    }
+}
+
 // Test function for ESP8266 communication
 void testESP8266Communication() {
     Serial.println("=== ESP8266 Communication Test ===");
     
-    // Send test messages
-    espComm.sendData("TEST:ESP8266_HELLO");
-    delay(500);
-    espComm.sendCommand("GET_STATUS");
-    delay(500);
-    espComm.sendFirebaseStatus("CONNECTED");
-    delay(500);
-    espComm.setFanSpeed(50);
-    delay(500);
+    bool testResult = espComm.testCommunication();
     
-    Serial.println("Test messages sent. Check ESP32 serial monitor for received data.");
-    
-    // Check for responses
-    unsigned long testStart = millis();
-    Serial.println("Waiting for ESP32 response...");
-    while (millis() - testStart < 5000) { // Wait 5 seconds for response
-        if (espComm.isDataAvailable()) {
-            String response = espComm.receiveData();
-            if (response.length() > 0) {
-                Serial.println("ESP32 responded: " + response);
-                break;
-            }
+    if (testResult) {
+        Serial.println("✅ ESP32 communication working!");
+        if (firebaseManager.isReady()) {
+            firebaseManager.sendMessage("Smart Fan", "ESP8266-ESP32 communication established! ✅");
         }
-        delay(100);
+    } else {
+        Serial.println("❌ ESP32 communication failed!");
+        if (firebaseManager.isReady()) {
+            firebaseManager.sendMessage("Smart Fan Alert", "ESP32 communication failed! ❌");
+        }
     }
     
     Serial.println("=== ESP8266 Communication Test Complete ===");
 }
+
+
