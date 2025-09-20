@@ -3,6 +3,7 @@
 
 #include <ESP8266WiFi.h>
 #include <WiFiManager.h>
+#include "NTPConfig.h"
 
 void setupWiFi();
 

@@ -1,7 +1,6 @@
 #include "FirebaseConfig.h"
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
-#include <time.h>
 
 // Global instance pointer for callback access
 FirebaseManager* globalFirebaseManager = nullptr;
@@ -11,38 +10,6 @@ FirebaseManager::FirebaseManager() {
     tokenParentPath = "smartfan";
     tokenPaths[0] = "/tokens";
     globalFirebaseManager = this;
-}
-
-bool FirebaseManager::setupNTPTime() {
-    Serial.println("Setting up NTP time synchronization...");
-    
-    // Configure multiple NTP servers for redundancy
-    configTime(0, 0, "pool.ntp.org", "time.nist.gov", "time.google.com");
-    
-    int retry = 0;
-    const int maxRetries = 20;
-    const int retryDelay = 1000; // 1 second
-    
-    Serial.print("Waiting for NTP time sync");
-    while (!time(nullptr) && retry < maxRetries) {
-        Serial.print(".");
-        delay(retryDelay);
-        retry++;
-    }
-    
-    if (retry >= maxRetries) {
-        Serial.println("\nNTP time sync failed!");
-        return false;
-    }
-    
-    Serial.println("\nNTP time synchronized successfully!");
-    
-    // Print current time for verification
-    time_t now = time(nullptr);
-    Serial.print("Current time: ");
-    Serial.println(ctime(&now));
-    
-    return true;
 }
 
 void FirebaseManager::printNetworkDiagnostics() {
@@ -97,12 +64,9 @@ void FirebaseManager::begin() {
     // Print network diagnostics for debugging
     printNetworkDiagnostics();
 
-    // Setup NTP time synchronization BEFORE Firebase initialization
-    if (!setupNTPTime()) {
-        Serial.println("Failed to synchronize time. Firebase authentication may fail.");
-        // Print diagnostics again to see if anything changed
-        printNetworkDiagnostics();
-    }
+    // Since NTP is already initialized in WiFiManager, just get current time
+    Serial.println("Using NTP time configured during WiFi setup...");
+    getNTPDate();
 
     Serial.printf("Firebase Client v%s\n\n", FIREBASE_CLIENT_VERSION);
 
@@ -120,9 +84,9 @@ void FirebaseManager::begin() {
     // Set network reconnection
     Firebase.reconnectNetwork(true);
     
-    // Configure buffer sizes
-    fbdo.setBSSLBufferSize(4096, 1024);
-    fbdo.setResponseSize(4096);
+    // Configure buffer sizes - Reduced for ESP8266 memory constraints
+    fbdo.setBSSLBufferSize(1024, 512);  // Reduced from 4096, 1024
+    fbdo.setResponseSize(1024);         // Reduced from 4096
 
     // Set timeouts to handle slow connections
     config.timeout.serverResponse = 10 * 1000; // 10 seconds
@@ -164,8 +128,8 @@ void FirebaseManager::begin() {
                 Serial.printf("Retrying in %d seconds...\n", delayTime / 1000);
                 delay(delayTime);
                 
-                // Re-sync time before retry
-                setupNTPTime();
+                // Get current time before retry
+                getNTPDate();
             }
         }
     }
@@ -175,8 +139,8 @@ void FirebaseManager::begin() {
         return;
     }
     
-    // Initialize token stream
-    initializeTokenStream();
+    // Initialize token stream - TEMPORARILY DISABLED FOR MEMORY OPTIMIZATION
+    // initializeTokenStream();
 }
 
 void FirebaseManager::initializeTokenStream() {
@@ -257,6 +221,9 @@ void FirebaseManager::tokenStreamTimeoutCallback(bool timeout) {
 }
 
 void FirebaseManager::sendMessageToAll(String title, String body) {
+    // TEMPORARILY DISABLED FOR MEMORY OPTIMIZATION
+    Serial.println("📲 FCM disabled - would send: " + title + " - " + body);
+    /*
     for (int i = 0; i < tokenCount; i++) {
         Serial.println("📲 Sending to: " + deviceTokens[i]);
 
@@ -276,9 +243,13 @@ void FirebaseManager::sendMessageToAll(String title, String body) {
             Serial.println("Error sending notification: " + fbdo.errorReason());
         }
     }
+    */
 }
 
 void FirebaseManager::sendMessage(String title, String body) {
+    // TEMPORARILY DISABLED FOR MEMORY OPTIMIZATION
+    Serial.println("📲 FCM disabled - would send: " + title + " - " + body);
+    /*
     Serial.print("Send Firebase Cloud Messaging... ");
 
     FCM_HTTPv1_JSON_Message msg;
@@ -298,10 +269,14 @@ void FirebaseManager::sendMessage(String title, String body) {
     } else {
         Serial.println("FCM Error: " + fbdo.errorReason());
     }
+    */
 }
 
 void FirebaseManager::updateDeviceCurrent(const String& deviceId, float temperature, int fanSpeed, const String& mode, unsigned long lastUpdate, float voltage, float current, float watt, float kwh) {
-    String path = "/smartfan/devices/" + deviceId + "/current";
+    // Use static String to avoid frequent allocations
+    static String path;
+    path = "/smartfan/devices/" + deviceId + "/current";
+    
     FirebaseJson json;
     json.set("temperature", temperature);
     json.set("fanSpeed", fanSpeed);
@@ -321,8 +296,13 @@ void FirebaseManager::updateDeviceCurrent(const String& deviceId, float temperat
 }
 
 void FirebaseManager::logDeviceData(const String& deviceId, unsigned long timestamp, float temperature, int fanSpeed, float voltage, float current, float watt, float kwh) {
-    String logId = String(timestamp);
-    String path = "/smartfan/devices/" + deviceId + "/logs/" + logId;
+    // Use static Strings to avoid frequent allocations
+    static String logId;
+    static String path;
+    
+    logId = String(timestamp);
+    path = "/smartfan/devices/" + deviceId + "/logs/" + logId;
+    
     FirebaseJson json;
     json.set("timestamp", (int64_t)timestamp);
     json.set("temperature", temperature);

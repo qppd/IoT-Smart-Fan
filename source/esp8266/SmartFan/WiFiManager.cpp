@@ -12,4 +12,7 @@ void setupWiFi() {
     Serial.println("WiFi connected successfully!");
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
+    
+    // Initialize NTP after successful WiFi connection
+    initNTP();
 }

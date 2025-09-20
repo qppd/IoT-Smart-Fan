@@ -110,8 +110,8 @@ void readAllSensors() {
     
     // Validate sensor readings
     sensors.sensorsOk = (!isnan(sensors.temperature) && 
-                        !isnan(sensors.humidity) && 
-                        sensors.current >= 0);
+                        !isnan(sensors.humidity)
+                        );
     
     if (sensors.sensorsOk) {
         // Calculate power

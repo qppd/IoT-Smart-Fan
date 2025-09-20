@@ -4,6 +4,7 @@
 #include <ESP8266WiFi.h>
 #include <Firebase_ESP_Client.h>
 #include "firebase_credentials.h"
+#include "NTPConfig.h"
 
 #define MAX_TOKENS 10  // Maximum number of device tokens to store
 
@@ -37,7 +38,6 @@ private:
     
     // Internal methods
     void initializeTokenStream();
-    bool setupNTPTime();
     void printNetworkDiagnostics();
     static void tokenStreamCallback(MultiPathStream stream);
     static void tokenStreamTimeoutCallback(bool timeout);

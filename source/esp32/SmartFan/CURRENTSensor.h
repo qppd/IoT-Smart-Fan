@@ -5,7 +5,7 @@
 
 class CURRENTSensor {
 public:
-    CURRENTSensor(uint8_t pin, float vRef = 3.3, float sensitivity = 0.185);
+    CURRENTSensor(uint8_t pin, float vRef = 3.3, float sensitivity = 2.185);
     void begin();
     float readCurrent(uint16_t samples = 100);
 private:

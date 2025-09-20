@@ -5,6 +5,7 @@
 #include "firebase_credentials.h"
 #include "WiFiManager.h"
 #include "ESPCommunication.h"
+#include "NTPConfig.h"
 
 FirebaseManager firebaseManager;
 ESPCommunication espComm(ESP_SERIAL_RX, ESP_SERIAL_TX);
@@ -37,11 +38,22 @@ void setup() {
     Serial.println();
     Serial.println("=== Smart Fan ESP8266 - Firebase & WiFi Manager ===");
     
+    // Print initial memory status
+    Serial.printf("Initial Free Heap: %d bytes\n", ESP.getFreeHeap());
+    Serial.printf("Initial Heap Fragmentation: %d%%\n", ESP.getHeapFragmentation());
+    
     pinMode(WIFI_RESET_PIN, INPUT_PULLUP);
     
     // Initialize WiFi and Firebase
     setupWiFi();
+    
+    // Check memory after WiFi setup
+    Serial.printf("After WiFi - Free Heap: %d bytes\n", ESP.getFreeHeap());
+    
     firebaseManager.begin();
+    
+    // Check memory after Firebase setup
+    Serial.printf("After Firebase - Free Heap: %d bytes\n", ESP.getFreeHeap());
 
     //firebaseManager.resetWiFiSettings();
     
@@ -49,10 +61,12 @@ void setup() {
     espComm.begin(9600);
     
     Serial.println("Smart Fan ESP8266 Initialized Successfully!");
+    Serial.printf("Final Free Heap: %d bytes\n", ESP.getFreeHeap());
     
-    // Send initial notification
+    // Send initial notification - TEMPORARILY DISABLED
     delay(2000);
-    firebaseManager.sendMessage("Smart Fan", "ESP8266 WiFi/Firebase module started! 🌟");
+    // firebaseManager.sendMessage("Smart Fan", "ESP8266 WiFi/Firebase module started! 🌟");
+    Serial.println("📲 FCM disabled - system started successfully");
     
     // Test communication with ESP32
     delay(1000);
@@ -68,6 +82,10 @@ void loop() {
     
     // Send data to Firebase periodically
     if (millis() - lastDataSend > DATA_SEND_INTERVAL) {
+        // Check memory before Firebase operations
+        if (ESP.getFreeHeap() < 8000) {  // Less than 8KB free
+            Serial.printf("⚠️ Low memory warning: %d bytes free\n", ESP.getFreeHeap());
+        }
         sendFirebaseData();
         lastDataSend = millis();
     }
@@ -137,9 +155,10 @@ void requestESP32Data() {
 void checkESP32Connection() {
     if (!fanData.esp32Connected) {
         Serial.println("⚠️ ESP32 connection lost - sending alert");
-        if (firebaseManager.isReady()) {
-            firebaseManager.sendMessage("Smart Fan Alert", "ESP32 sensor module disconnected! ⚠️");
-        }
+        // FCM temporarily disabled
+        // if (firebaseManager.isReady()) {
+        //     firebaseManager.sendMessage("Smart Fan Alert", "ESP32 sensor module disconnected! ⚠️");
+        // }
     }
     
     // Print communication status
@@ -213,10 +232,9 @@ void sendStatusNotification() {
     statusMessage += "🔧 Mode: " + fanData.mode + "\n";
     statusMessage += "📡 ESP32: " + connStatus;
     
-    // Send to all registered devices
-    firebaseManager.sendMessageToAll("Smart Fan Update", statusMessage);
-    
-    Serial.println("📱 Status notification sent");
+    // Send to all registered devices - FCM temporarily disabled
+    // firebaseManager.sendMessageToAll("Smart Fan Update", statusMessage);
+    Serial.println("📱 Status notification prepared (FCM disabled): " + statusMessage);
 }
 
 void handleWiFiReset() {
@@ -247,14 +265,16 @@ void testESP8266Communication() {
     
     if (testResult) {
         Serial.println("✅ ESP32 communication working!");
-        if (firebaseManager.isReady()) {
-            firebaseManager.sendMessage("Smart Fan", "ESP8266-ESP32 communication established! ✅");
-        }
+        // FCM temporarily disabled
+        // if (firebaseManager.isReady()) {
+        //     firebaseManager.sendMessage("Smart Fan", "ESP8266-ESP32 communication established! ✅");
+        // }
     } else {
         Serial.println("❌ ESP32 communication failed!");
-        if (firebaseManager.isReady()) {
-            firebaseManager.sendMessage("Smart Fan Alert", "ESP32 communication failed! ❌");
-        }
+        // FCM temporarily disabled
+        // if (firebaseManager.isReady()) {
+        //     firebaseManager.sendMessage("Smart Fan Alert", "ESP32 communication failed! ❌");
+        // }
     }
     
     Serial.println("=== ESP8266 Communication Test Complete ===");
