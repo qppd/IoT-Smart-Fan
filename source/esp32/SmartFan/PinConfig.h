@@ -12,7 +12,6 @@
 #define BUZZER_PIN 25          // Piezo buzzer pin
 #define TRIAC_PIN 18           // TRIAC module output pin (RobotDyn compatible)
 #define ZERO_CROSS_PIN 5       // Zero cross detection pin for TRIAC dimming (RobotDyn compatible)
-#define WIFI_RESET_PIN 0       // WiFi reset button pin (boot button)
 
 // Serial communication pins for inter-board communication
 #define ESP_SERIAL_RX 16       // Hardware Serial RX pin for ESP8266 communication
