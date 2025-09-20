@@ -37,6 +37,8 @@ private:
     
     // Internal methods
     void initializeTokenStream();
+    bool setupNTPTime();
+    void printNetworkDiagnostics();
     static void tokenStreamCallback(MultiPathStream stream);
     static void tokenStreamTimeoutCallback(bool timeout);
 };

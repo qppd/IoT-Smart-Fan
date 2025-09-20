@@ -28,10 +28,8 @@ ESP32                           Sensors
 │  5V      ●──────────●────────● VCC
 │  GND     ●──────────●────────● GND
 │                     │         
-│                     │         ZMPT101B Voltage Sensor
-│  GPIO35  ●──────────●────────● Output (Analog)
-│  5V      ●──────────●────────● VCC
-│  GND     ●──────────●────────● GND
+│                     │         Note: GPIO35 freed up
+│                     │         (Voltage sensor removed - using fixed 220V)
 │                     │         
 │                     │         Piezo Buzzer
 │  GPIO25  ●──────────●────────● Positive
@@ -77,12 +75,12 @@ ESP8266                         Components
 ### Sensors
 - **DHT22**: 3.3V, 2.5mA max
 - **ACS712**: 5V, 13mA typical
-- **ZMPT101B**: 5V, 15mA max
 - **TRIAC Module**: 5V, 20mA max
+- **Note**: ZMPT101B voltage sensor removed
 
 ### Total Power Budget
 - **ESP8266 + Communication**: ~200mA @ 5V
-- **ESP32 + All Sensors**: ~300mA @ 5V
+- **ESP32 + Sensors**: ~280mA @ 5V (reduced without voltage sensor)
 - **Recommended Supply**: 5V @ 1A minimum
 
 ## Connection Notes

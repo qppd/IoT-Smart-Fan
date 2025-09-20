@@ -6,7 +6,7 @@
 // Sensor pins
 #define DHT_PIN 4               // DHT22 temperature and humidity sensor pin
 #define CURRENT_SENSOR_PIN 34   // ACS712 current sensor pin (analog)
-#define VOLTAGE_SENSOR_PIN 35   // ZMPT101B voltage sensor pin (analog)
+// Note: Voltage sensor (ZMPT101B) removed - using fixed 220V value
 
 // Control pins
 #define BUZZER_PIN 25          // Piezo buzzer pin

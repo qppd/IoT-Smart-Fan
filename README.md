@@ -27,7 +27,7 @@
 ### 🏗️ Dual-ESP Architecture
 
 - **🌐 ESP8266**: WiFi Manager + Firebase Handler — Manages WiFi, cloud database, and push notifications
-- **🧠 ESP32**: Sensor Reader + Hardware Controller — Handles DHT22, ACS712, ZMPT101B, TRIAC fan control, and safety monitoring
+- **🧠 ESP32**: Sensor Reader + Hardware Controller — Handles DHT22, ACS712, TRIAC fan control, and safety monitoring (220V fixed voltage)
 - **📡 Serial Communication**: Custom protocol for real-time data exchange between microcontrollers at 9600 baud (ESP8266: SoftwareSerial, ESP32: HardwareSerial2)
 
 
@@ -40,7 +40,7 @@
 - **📱 Modern Android App**: Material Design 3, animated gauges, power analytics, device management
 - **☁️ Cloud Integration**: Firebase for data logging, user authentication, remote control, and push notifications
 - **🔧 Easy Setup**: WiFiManager captive portal, app-based WiFi config, and hardware reset
-- **⚡ Power Monitoring**: ACS712 (current), ZMPT101B (voltage), with safety alerts and analytics
+- **⚡ Power Monitoring**: ACS712 (current) with fixed 220V for calculations, safety alerts and analytics
 - **🔔 Smart Notifications**: Push notifications for temperature/power alerts and system status
 
 ---
@@ -48,6 +48,12 @@
 
 
 ## 📋 Recent Updates (September 2025)
+
+### ⚡ Hardware Simplification: Voltage Sensor Removal
+- **ZMPT101B Voltage Sensor**: Removed from hardware design, using fixed 220V value for power calculations
+- **GPIO35 Freed**: Pin now available for future expansion or additional sensors
+- **Simplified Wiring**: Reduced component count and power consumption
+- **Maintained Functionality**: Power monitoring still accurate with current sensor + fixed voltage
 
 ### ✅ Major System Milestone: All Core Features Working
 - **Serial Communication (ESP8266 ↔ ESP32)**: Fully operational, robust, and reliable at 9600 baud. Real-time data and command exchange confirmed.
@@ -94,7 +100,7 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 **ESP32 (Sensor & Hardware Module):**
 - DHT22: Temperature/humidity sensor (**fully working**)
 - ACS712: Current sensor (RMS, calibrated)
-- ZMPT101B: Voltage sensor (true RMS)
+- Fixed 220V for power calculations (voltage sensor removed)
 - TRIAC: Fan speed control (phase angle, PWM) (**fully working**)
 - Piezo buzzer: Alerts for over-temperature (**fully working**)
 - Automatic/manual fan control logic
@@ -201,7 +207,7 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 <details>
 <summary><b>⚡ Power Monitoring & Safety</b></summary>
 
-- **🔌 Electrical Monitoring**: ACS712 current sensor (0.185 V/A) and ZMPT101B voltage sensor
+- **🔌 Electrical Monitoring**: ACS712 current sensor (0.185 V/A) with fixed 220V for power calculations
 - **📈 Power Analytics**: Real-time wattage calculation (V×I) and kWh energy tracking
 - **🛡️ Safety Features**: Sensor validation, range checking, and NaN detection
 - **🔍 RMS Calculation**: True RMS measurement with calibrated sampling (100 samples)
@@ -366,10 +372,10 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 **Sensors & Components:**
 - 🌡️ **DHT22** (GPIO4, ESP32)
 - ⚡ **ACS712** (GPIO34, ESP32)
-- 🔌 **ZMPT101B** (GPIO35, ESP32)
-- 🔊 **Piezo Buzzer** (GPIO25, ESP32)
+-  **Piezo Buzzer** (GPIO25, ESP32)
 - 🎛️ **TRIAC Module** (GPIO12, ESP32)
 - 🔋 **Power Supplies** (separate 3.3V/5V for each ESP)
+- ⚡ **Fixed 220V** (no voltage sensor needed)
 
 
 **Inter-ESP Communication:**
@@ -418,11 +424,11 @@ ESP8266 GND     ←→ ESP32 GND (Common Ground)
 ```
 DHT22 Data       → GPIO4
 ACS712 Analog    → GPIO34
-ZMPT101B Analog  → GPIO35
 Piezo Buzzer     → GPIO25
 TRIAC Control    → GPIO12
 Zero Cross       → GPIO2
 WiFi Reset Btn   → GPIO0
+Note: GPIO35 freed up (voltage sensor removed)
 ```
 
 **ESP8266 Connections (WiFi Manager):**
@@ -605,13 +611,13 @@ Install these libraries in Arduino IDE:
 **ESP32 Sensors Not Reading:**
 1. **DHT22**: Verify 3.3V/5V power and data pin (GPIO4) connection
 2. **ACS712**: Check analog pin (GPIO34) and ensure correct sensitivity (0.185V/A)
-3. **ZMPT101B**: Verify voltage sensor calibration and analog pin (GPIO35)
-4. **Power Supply**: Ensure stable power to all sensor modules
-5. **Wiring**: Check for short circuits or loose connections
+3. **Power Supply**: Ensure stable power to all sensor modules
+4. **Wiring**: Check for short circuits or loose connections
+5. **Note**: Voltage sensor removed - using fixed 220V value
 
 **Invalid Sensor Values (NaN):**
 - DHT22 initialization timeout - check power and data line
-- Current/voltage sensors returning out-of-range values
+- Current sensor returning out-of-range values
 - Review sensor validation logic in ESP32 code
 
 </details>
@@ -791,13 +797,13 @@ SmartFan/
         ├── SmartFan.ino           # Main application logic
         ├── 🌡️ DHTSensor.cpp/.h    # Temperature/humidity sensor
         ├── ⚡ CURRENTSensor.cpp/.h # Current measurement
-        ├── 🔌 VOLTAGESensor.cpp/.h # Voltage measurement
         ├── 🎛️ TRIACModule.cpp/.h   # TRIAC control
         ├── 🎯 PIDConfig.cpp/.h     # PID control logic
         ├── 🔊 BUZZERConfig.cpp/.h  # Buzzer alerts
         ├── 🔥 FirebaseConfig.cpp/.h # Cloud integration
         ├── 📡 firebase_credentials.h # Credentials
         └── 📌 PinConfig.h          # Pin assignments
+        Note: VOLTAGESensor removed - using fixed 220V
 ```
 
 </details>
@@ -837,11 +843,10 @@ SmartFan/
 #define ACS_OFFSET 2.5         // Zero current voltage
 ```
 
-**Voltage Sensor (ZMPT101B):**
+**Voltage Configuration:**
 ```cpp
-// In VOLTAGESensor.cpp
-#define VOLTAGE_CALIBRATION 1.0  // Adjust based on actual readings
-#define VOLTAGE_OFFSET 0.0       // DC offset compensation
+// Fixed voltage value in ESP32 SmartFan.ino
+sensors.voltage = 220.0; // No sensor needed
 ```
 
 </details>

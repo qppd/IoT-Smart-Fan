@@ -1,6 +1,7 @@
 #include "FirebaseConfig.h"
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
+#include <time.h>
 
 // Global instance pointer for callback access
 FirebaseManager* globalFirebaseManager = nullptr;
@@ -10,6 +11,73 @@ FirebaseManager::FirebaseManager() {
     tokenParentPath = "smartfan";
     tokenPaths[0] = "/tokens";
     globalFirebaseManager = this;
+}
+
+bool FirebaseManager::setupNTPTime() {
+    Serial.println("Setting up NTP time synchronization...");
+    
+    // Configure multiple NTP servers for redundancy
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov", "time.google.com");
+    
+    int retry = 0;
+    const int maxRetries = 20;
+    const int retryDelay = 1000; // 1 second
+    
+    Serial.print("Waiting for NTP time sync");
+    while (!time(nullptr) && retry < maxRetries) {
+        Serial.print(".");
+        delay(retryDelay);
+        retry++;
+    }
+    
+    if (retry >= maxRetries) {
+        Serial.println("\nNTP time sync failed!");
+        return false;
+    }
+    
+    Serial.println("\nNTP time synchronized successfully!");
+    
+    // Print current time for verification
+    time_t now = time(nullptr);
+    Serial.print("Current time: ");
+    Serial.println(ctime(&now));
+    
+    return true;
+}
+
+void FirebaseManager::printNetworkDiagnostics() {
+    Serial.println("\n=== Network Diagnostics ===");
+    
+    // WiFi Status
+    Serial.printf("WiFi Status: %s\n", 
+                  WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected");
+    Serial.printf("IP Address: %s\n", WiFi.localIP().toString().c_str());
+    Serial.printf("Gateway: %s\n", WiFi.gatewayIP().toString().c_str());
+    Serial.printf("DNS Server: %s\n", WiFi.dnsIP().toString().c_str());
+    Serial.printf("Signal Strength (RSSI): %d dBm\n", WiFi.RSSI());
+    
+    // DNS Resolution Test
+    Serial.println("\nTesting DNS resolution...");
+    IPAddress ip;
+    if (WiFi.hostByName("pool.ntp.org", ip)) {
+        Serial.printf("DNS Test: SUCCESS - pool.ntp.org resolved to %s\n", ip.toString().c_str());
+    } else {
+        Serial.println("DNS Test: FAILED - Could not resolve pool.ntp.org");
+    }
+    
+    // NTP Time Check
+    time_t now = time(nullptr);
+    if (now > 1000000000) { // Valid timestamp (after year 2001)
+        Serial.printf("NTP Time: SUCCESS - %s", ctime(&now));
+    } else {
+        Serial.println("NTP Time: FAILED - Time not synchronized");
+    }
+    
+    // Memory Status
+    Serial.printf("Free Heap: %d bytes\n", ESP.getFreeHeap());
+    Serial.printf("Heap Fragmentation: %d%%\n", ESP.getHeapFragmentation());
+    
+    Serial.println("=== End Diagnostics ===\n");
 }
 
 void FirebaseManager::begin() {
@@ -26,6 +94,16 @@ void FirebaseManager::begin() {
     Serial.println(WiFi.localIP());
     Serial.println();
 
+    // Print network diagnostics for debugging
+    printNetworkDiagnostics();
+
+    // Setup NTP time synchronization BEFORE Firebase initialization
+    if (!setupNTPTime()) {
+        Serial.println("Failed to synchronize time. Firebase authentication may fail.");
+        // Print diagnostics again to see if anything changed
+        printNetworkDiagnostics();
+    }
+
     Serial.printf("Firebase Client v%s\n\n", FIREBASE_CLIENT_VERSION);
 
     // Assign Firebase credentials
@@ -36,23 +114,66 @@ void FirebaseManager::begin() {
     config.service_account.data.project_id = FIREBASE_PROJECT_ID;
     config.service_account.data.private_key = PRIVATE_KEY;
 
-    // Optional: Token status callback
-    config.token_status_callback = tokenStatusCallback;
+    // Optional: Token status callback (using library's default)
+    // config.token_status_callback = tokenStatusCallback;
 
-    // Recommended settings
+    // Set network reconnection
     Firebase.reconnectNetwork(true);
+    
+    // Configure buffer sizes
     fbdo.setBSSLBufferSize(4096, 1024);
     fbdo.setResponseSize(4096);
 
-    // Begin Firebase
-    Firebase.begin(&config, &auth);
+    // Set timeouts to handle slow connections
+    config.timeout.serverResponse = 10 * 1000; // 10 seconds
+    config.timeout.socketConnection = 10 * 1000; // 10 seconds
+    config.timeout.sslHandshake = 30 * 1000; // 30 seconds
+    config.timeout.rtdbKeepAlive = 45 * 1000; // 45 seconds
+    config.timeout.rtdbStreamReconnect = 1 * 1000; // 1 second
+    config.timeout.rtdbStreamError = 3 * 1000; // 3 seconds
 
-    // Wait until Firebase is ready
-    while (!Firebase.ready()) {
-        delay(100);
+    // Begin Firebase with retry logic
+    Serial.println("Initializing Firebase...");
+    
+    int retryCount = 0;
+    const int maxRetries = 5;
+    const int baseDelay = 2000; // 2 seconds
+    
+    while (retryCount < maxRetries) {
+        Firebase.begin(&config, &auth);
+        
+        // Wait for Firebase to initialize with timeout
+        int initWait = 0;
+        const int maxInitWait = 30; // 30 seconds max wait
+        
+        while (!Firebase.ready() && initWait < maxInitWait) {
+            delay(1000);
+            initWait++;
+            Serial.print(".");
+        }
+        
+        if (Firebase.ready()) {
+            Serial.println("\nFirebase initialized successfully!");
+            break;
+        } else {
+            retryCount++;
+            Serial.printf("\nFirebase initialization failed (attempt %d/%d)\n", retryCount, maxRetries);
+            
+            if (retryCount < maxRetries) {
+                int delayTime = baseDelay * (1 << (retryCount - 1)); // Exponential backoff
+                Serial.printf("Retrying in %d seconds...\n", delayTime / 1000);
+                delay(delayTime);
+                
+                // Re-sync time before retry
+                setupNTPTime();
+            }
+        }
     }
-
-    Serial.println("Firebase initialized successfully!");
+    
+    if (!Firebase.ready()) {
+        Serial.println("Failed to initialize Firebase after all retries!");
+        return;
+    }
     
     // Initialize token stream
     initializeTokenStream();

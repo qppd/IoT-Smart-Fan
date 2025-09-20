@@ -3,7 +3,6 @@
 #include "PinConfig.h"
 #include "DHTSensor.h"
 #include "CURRENTSensor.h"
-#include "VOLTAGESensor.h"
 #include "BUZZERConfig.h"
 #include "TRIACModule.h"
 #include "ESPCommunication.h"
@@ -11,7 +10,6 @@
 // Create sensor and control objects
 DHTSensor dhtSensor(DHT_PIN);
 CURRENTSensor currentSensor(CURRENT_SENSOR_PIN);
-VOLTAGESensor voltageSensor(VOLTAGE_SENSOR_PIN);
 BUZZERConfig buzzer(BUZZER_PIN);
 TRIACModule triac(TRIAC_PIN, ZERO_CROSS_PIN);
 ESPCommunication espComm(ESP_SERIAL_RX, ESP_SERIAL_TX);
@@ -55,7 +53,7 @@ void setup() {
     // Initialize all components
     dhtSensor.begin();
     currentSensor.begin();
-    voltageSensor.begin();
+    // Note: Voltage sensor removed - using fixed 220V value
     buzzer.begin();
     triac.begin();
     
@@ -108,12 +106,11 @@ void readAllSensors() {
     sensors.temperature = dhtSensor.readTemperature();
     sensors.humidity = dhtSensor.readHumidity();
     sensors.current = currentSensor.readCurrent();
-    sensors.voltage = voltageSensor.readVoltage();
+    sensors.voltage = 220.0; // Fixed voltage value (no sensor needed)
     
     // Validate sensor readings
     sensors.sensorsOk = (!isnan(sensors.temperature) && 
                         !isnan(sensors.humidity) && 
-                        sensors.voltage > 0 && 
                         sensors.current >= 0);
     
     if (sensors.sensorsOk) {
