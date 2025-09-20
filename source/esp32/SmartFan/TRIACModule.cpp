@@ -1,101 +1,76 @@
-#include "TRIACModule.h"
+/**
+ * TRIACModule.cpp
+ * 
+ * Implementation of TRIAC control using RobotDyn Dimmer Library
+ * 
+ * The RobotDyn dimmer library handles:
+ * - Zero-cross detection interrupts
+ * - Phase angle calculation
+ * - TRIAC gate triggering
+ * - Power percentage to phase angle conversion
+ */
 
-// Static member initialization
-TRIACModule* TRIACModule::_instance = nullptr;
+#include "TRIACModule.h"
 
 TRIACModule::TRIACModule(uint8_t outputPin, uint8_t zeroCrossPin)
     : _outputPin(outputPin), _zeroCrossPin(zeroCrossPin), _currentPower(0), 
-      _isOn(false), _zeroCrossDetected(false), _triggerDelay(HALF_CYCLE_TIME) {
-    _instance = this;
+      _isOn(false), _dimmer(nullptr) {
 }
 
 void TRIACModule::begin() {
-    // Configure pins
-    pinMode(_outputPin, OUTPUT);
-    pinMode(_zeroCrossPin, INPUT_PULLUP); // Use pull-up to avoid floating
-
-    // Initialize output low
-    digitalWrite(_outputPin, LOW);
-
-    // Attach zero-cross interrupt
-    attachInterrupt(digitalPinToInterrupt(_zeroCrossPin), zeroCrossISR, RISING);
-
+    // Initialize the RobotDyn dimmer with the specified pins
+    _dimmer = new dimmerLamp(_outputPin, _zeroCrossPin);
+    
+    // Initialize dimmer in NORMAL_MODE and turn it ON
+    _dimmer->begin(NORMAL_MODE, ON);
+    
+    // Set initial power to 0%
+    _dimmer->setPower(0);
+    _currentPower = 0;
     _isOn = true;
-    setPower(0); // Start with 0% power
-
-    // DEBUG: Simulate a zero-cross event at startup to kickstart TRIAC
-    Serial.println("[TRIACModule] Simulating zero-cross event at startup");
-    handleZeroCross();
+    
+    Serial.println("[TRIACModule] Initialized with RobotDyn Dimmer Library");
+    Serial.print("[TRIACModule] Output Pin: ");
+    Serial.print(_outputPin);
+    Serial.print(", Zero Cross Pin: ");
+    Serial.println(_zeroCrossPin);
 }
 
 void TRIACModule::setPower(uint8_t percent) {
     if (percent > 100) percent = 100;
+    
     _currentPower = percent;
-    calculateTriggerDelay(percent);
+    
+    if (_dimmer != nullptr && _isOn) {
+        _dimmer->setPower(percent);
+        Serial.print("[TRIACModule] Power set to: ");
+        Serial.print(percent);
+        Serial.print("%, Actual dimmer power: ");
+        Serial.println(_dimmer->getPower());
+    }
 }
 
 uint8_t TRIACModule::getPower() {
+    if (_dimmer != nullptr) {
+        return _dimmer->getPower();
+    }
     return _currentPower;
 }
 
 void TRIACModule::turnOn() {
     _isOn = true;
-    calculateTriggerDelay(_currentPower);
+    if (_dimmer != nullptr) {
+        _dimmer->setState(ON);
+        _dimmer->setPower(_currentPower);
+        Serial.println("[TRIACModule] Turned ON");
+    }
 }
 
 void TRIACModule::turnOff() {
     _isOn = false;
-    _triggerDelay = HALF_CYCLE_TIME; // No trigger
-    digitalWrite(_outputPin, LOW);
-}
-
-void IRAM_ATTR TRIACModule::zeroCrossISR() {
-    if (_instance != nullptr) {
-        // DEBUG: Indicate ISR was triggered
-        Serial.println("[TRIACModule] Zero-cross ISR triggered");
-        _instance->handleZeroCross();
+    if (_dimmer != nullptr) {
+        _dimmer->setPower(0);
+        _dimmer->setState(OFF);
+        Serial.println("[TRIACModule] Turned OFF");
     }
-}
-
-void IRAM_ATTR TRIACModule::handleZeroCross() {
-    if (!_isOn || _currentPower == 0) {
-        digitalWrite(_outputPin, LOW);
-        return;
-    }
-    
-    if (_currentPower >= 100) {
-        // Full power - trigger immediately
-        digitalWrite(_outputPin, HIGH);
-        delayMicroseconds(10); // Short pulse
-        digitalWrite(_outputPin, LOW);
-        return;
-    }
-    
-    // Schedule trigger after calculated delay
-    _zeroCrossDetected = true;
-    
-    // Use timer for precise delay
-    delayMicroseconds(_triggerDelay);
-    
-    // Trigger TRIAC
-    digitalWrite(_outputPin, HIGH);
-    delayMicroseconds(10); // Short pulse to trigger TRIAC
-    digitalWrite(_outputPin, LOW);
-}
-
-void TRIACModule::calculateTriggerDelay(uint8_t power) {
-    if (power == 0) {
-        _triggerDelay = HALF_CYCLE_TIME;
-        return;
-    }
-    
-    if (power >= 100) {
-        _triggerDelay = MIN_TRIGGER_DELAY;
-        return;
-    }
-    
-    // Calculate delay based on power percentage
-    // Lower power = longer delay (trigger later in the cycle)
-    // Formula: delay = (100 - power) * (HALF_CYCLE_TIME - MIN_TRIGGER_DELAY) / 100 + MIN_TRIGGER_DELAY
-    _triggerDelay = ((100 - power) * (HALF_CYCLE_TIME - MIN_TRIGGER_DELAY)) / 100 + MIN_TRIGGER_DELAY;
 }

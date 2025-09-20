@@ -68,6 +68,9 @@ void setup() {
     delay(2000); // Wait for ESP8266 to initialize
     testESP32Communication();
     
+    // Test TRIAC dimmer (uncomment for testing)
+    // testTRIACDimmer();
+    
     Serial.println("Starting main sensor and control loop...");
 }
 
@@ -258,4 +261,30 @@ void testESP32Communication() {
     }
     
     Serial.println("=== ESP32 Communication Test Complete ===");
+}
+
+// Test function for TRIAC dimmer module
+void testTRIACDimmer() {
+    Serial.println("=== TRIAC Dimmer Test ===");
+    Serial.println("Testing RobotDyn Dimmer Library functionality...");
+    
+    // Test power levels from 0% to 100%
+    for (int power = 0; power <= 100; power += 25) {
+        Serial.print("Setting TRIAC power to: ");
+        Serial.print(power);
+        Serial.println("%");
+        
+        triac.setPower(power);
+        
+        Serial.print("Actual TRIAC power: ");
+        Serial.print(triac.getPower());
+        Serial.println("%");
+        
+        delay(2000); // Hold each power level for 2 seconds
+    }
+    
+    // Return to 0% power
+    triac.setPower(0);
+    Serial.println("TRIAC power returned to 0%");
+    Serial.println("=== TRIAC Dimmer Test Complete ===");
 }
