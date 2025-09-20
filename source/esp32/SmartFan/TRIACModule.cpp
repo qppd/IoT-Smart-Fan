@@ -12,16 +12,20 @@ TRIACModule::TRIACModule(uint8_t outputPin, uint8_t zeroCrossPin)
 void TRIACModule::begin() {
     // Configure pins
     pinMode(_outputPin, OUTPUT);
-    pinMode(_zeroCrossPin, INPUT_PULLUP);
-    
+    pinMode(_zeroCrossPin, INPUT_PULLUP); // Use pull-up to avoid floating
+
     // Initialize output low
     digitalWrite(_outputPin, LOW);
-    
+
     // Attach zero-cross interrupt
     attachInterrupt(digitalPinToInterrupt(_zeroCrossPin), zeroCrossISR, RISING);
-    
+
     _isOn = true;
     setPower(0); // Start with 0% power
+
+    // DEBUG: Simulate a zero-cross event at startup to kickstart TRIAC
+    Serial.println("[TRIACModule] Simulating zero-cross event at startup");
+    handleZeroCross();
 }
 
 void TRIACModule::setPower(uint8_t percent) {
@@ -47,6 +51,8 @@ void TRIACModule::turnOff() {
 
 void IRAM_ATTR TRIACModule::zeroCrossISR() {
     if (_instance != nullptr) {
+        // DEBUG: Indicate ISR was triggered
+        Serial.println("[TRIACModule] Zero-cross ISR triggered");
         _instance->handleZeroCross();
     }
 }

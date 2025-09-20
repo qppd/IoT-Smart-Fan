@@ -7,7 +7,7 @@ FirebaseManager* globalFirebaseManager = nullptr;
 
 FirebaseManager::FirebaseManager() {
     tokenCount = 0;
-    tokenParentPath = "plastech";
+    tokenParentPath = "smartfan";
     tokenPaths[0] = "/tokens";
     globalFirebaseManager = this;
 }

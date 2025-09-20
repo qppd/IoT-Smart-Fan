@@ -9,6 +9,7 @@ import android.content.pm.PackageManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.TextUtils;
@@ -211,14 +212,16 @@ public class WiFiSetupActivity extends AppCompatActivity implements WiFiNetworkA
                         }
                     }
                     if (!exists) {
-                        wifiNetworks.add(result);
+                        wifiNetworks/.add(result);
                     }
                 }
             }
             
             // Sort by signal strength
-            wifiNetworks.sort((a, b) -> Integer.compare(b.level, a.level));
-            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                wifiNetworks.sort((a, b) -> Integer.compare(b.level, a.level));
+            }
+
             wifiAdapter.notifyDataSetChanged();
             
             buttonScanWiFi.setText("Scan for Networks");
