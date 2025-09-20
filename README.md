@@ -372,8 +372,8 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 **Sensors & Components:**
 - 🌡️ **DHT22** (GPIO4, ESP32)
 - ⚡ **ACS712** (GPIO34, ESP32)
--  **Piezo Buzzer** (GPIO25, ESP32)
-- 🎛️ **TRIAC Module** (GPIO12, ESP32)
+- 🔊 **Piezo Buzzer** (GPIO25, ESP32)
+- 🎛️ **TRIAC Module** (GPIO18, ESP32)
 - 🔋 **Power Supplies** (separate 3.3V/5V for each ESP)
 - ⚡ **Fixed 220V** (no voltage sensor needed)
 
@@ -385,8 +385,8 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 
 
 **Additional Hardware:**
-- 📡 **Zero Cross Detection** (GPIO2, ESP32)
-- 🔘 **WiFi Reset Button** (D3/GPIO0, ESP8266, 3s hold)
+- 📡 **Zero Cross Detection** (GPIO5, ESP32)
+- 🔘 **WiFi Reset Button** (D3, ESP8266, 3s hold)
 
 ### 📊 Power Specifications
 - **Voltage Range**: 110V–400V AC
@@ -405,9 +405,14 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 
 **Step 1: Serial Communication Setup**
 ```
-ESP8266 D6 (RX) ←→ ESP32 GPIO17 (TX)
-ESP8266 D7 (TX) ←→ ESP32 GPIO16 (RX)
-ESP8266 GND     ←→ ESP32 GND (Common Ground)
+ESP8266 (WiFi/Firebase)          ESP32 (Sensors/Hardware)
+┌─────────────────────┐         ┌─────────────────────┐
+│                     │         │                     │
+│  D7 (TX) ●─────────●───────●● GPIO16 (RX)          │
+│  D6 (RX) ●─────────●───────●● GPIO17 (TX)          │
+│  GND     ●─────────●───────●● GND                  │
+│                     │         │                     │
+└─────────────────────┘         └─────────────────────┘
 ```
 
 **Step 2: Power Connections**
@@ -418,25 +423,100 @@ ESP8266 GND     ←→ ESP32 GND (Common Ground)
 </details>
 
 <details>
-<summary><b>�🔧 Sensor & Component Wiring</b></summary>
+<summary><b>🔧 ESP32 Sensor & Component Wiring</b></summary>
 
-**ESP32 Connections (Hardware Controller):**
 ```
-DHT22 Data       → GPIO4
-ACS712 Analog    → GPIO34
-Piezo Buzzer     → GPIO25
-TRIAC Control    → GPIO12
-Zero Cross       → GPIO2
-WiFi Reset Btn   → GPIO0
-Note: GPIO35 freed up (voltage sensor removed)
+ESP32                           Sensors & Components
+┌─────────────────────┐         
+│                     │         DHT22 Temperature/Humidity
+│  GPIO4   ●──────────●────────● Data Pin
+│  3.3V    ●──────────●────────● VCC
+│  GND     ●──────────●────────● GND
+│                     │         
+│                     │         ACS712 Current Sensor
+│  GPIO34  ●──────────●────────● Output (Analog)
+│  5V      ●──────────●────────● VCC
+│  GND     ●──────────●────────● GND
+│                     │         
+│                     │         Note: GPIO35 freed up
+│                     │         (Voltage sensor removed - using fixed 220V)
+│                     │         
+│                     │         Piezo Buzzer
+│  GPIO25  ●──────────●────────● Positive
+│  GND     ●──────────●────────● Negative
+│                     │         
+│                     │         TRIAC Module (RobotDyn Compatible)
+│  GPIO18  ●──────────●────────● PWM Input
+│  GPIO5   ●──────────●────────● Zero Cross Detect
+│  5V      ●──────────●────────● VCC
+│  GND     ●──────────●────────● GND
+│                     │         
+└─────────────────────┘         
 ```
 
-**ESP8266 Connections (WiFi Manager):**
+**RobotDyn TRIAC Pin Configuration:**
+- **TRIAC Output**: GPIO18 (Controls TRIAC gate signal) 
+- **Zero Cross Detection**: GPIO5 (Detects AC zero-crossing events)
+- Updated from GPIO12/GPIO2 for RobotDyn library compatibility
+
+</details>
+
+<details>
+<summary><b>🔧 ESP8266 Connections</b></summary>
+
 ```
-WiFi Reset Btn   → GPIO0 (D3)
-Serial RX        → GPIO12 (D6)
-Serial TX        → GPIO13 (D7)
+ESP8266                         Components
+┌─────────────────────┐         
+│                     │         WiFi Reset Button
+│  D3      ●──────────●────────● Button (to GND)
+│  3.3V    ●──────────●────────● Pull-up resistor
+│                     │         
+│                     │         Status LED (Optional)
+│  D1      ●──────────●────────● LED Anode
+│  GND     ●──────────●────────● LED Cathode (via resistor)
+│                     │         
+└─────────────────────┘         
 ```
+
+</details>
+
+<details>
+<summary><b>⚡ Power Supply Requirements</b></summary>
+
+**ESP8266:**
+- **Input**: 5V USB or 3.3V regulated
+- **Current**: ~200mA typical
+- **Notes**: Can be powered via micro USB
+
+**ESP32:**
+- **Input**: 5V USB or 3.3V regulated  
+- **Current**: ~250mA typical
+- **Notes**: Can be powered via micro USB
+
+**Sensors:**
+- **DHT22**: 3.3V, 2.5mA max
+- **ACS712**: 5V, 13mA typical
+- **TRIAC Module**: 5V, 20mA max
+- **Note**: ZMPT101B voltage sensor removed
+
+**Total Power Budget:**
+- **ESP8266 + Communication**: ~200mA @ 5V
+- **ESP32 + Sensors**: ~280mA @ 5V (reduced without voltage sensor)
+- **Recommended Supply**: 5V @ 1A minimum
+
+**Critical Connections:**
+1. **Serial Communication**: Ensure TX→RX and RX→TX crossover
+2. **Common Ground**: Both ESPs must share common ground
+3. **Power Isolation**: Consider separate power supplies for noise reduction
+4. **TRIAC Safety**: Proper isolation for AC fan control
+
+**Pull-up Resistors:**
+- DHT22 data line: 4.7kΩ to 3.3V
+- I2C lines (if used): 4.7kΩ to 3.3V
+- Reset button: 10kΩ to 3.3V
+
+**Capacitors (Recommended):**
+- Power supply decoupling: 100µF + 0.1µF near each ESP
 
 </details>
 
@@ -447,23 +527,136 @@ Serial TX        → GPIO13 (D7)
 
 Install these libraries in Arduino IDE:
 
+**ESP8266 Libraries:**
 ```bash
-# ESP8266 Libraries
 - Firebase ESP-Client by Mobizt
 - WiFiManager by tzapu (v0.16.0+)
 - ArduinoJson by Benoit Blanchon (v6.21.3+)
+```
 
-# ESP32 Libraries  
+**ESP32 Libraries:**
+```bash
 - DHT sensor library
 - Firebase ESP-Client by Mobizt
 - ArduinoJson by Benoit Blanchon (v6.21.3+)
+- RBDdimmer (RobotDyn Dimmer Library)
 ```
 
 **Installation Steps:**
 1. Open Arduino IDE
-2. Go to **Sketch > Include Library > Manage Libraries**
-3. Search and install each library listed above
-4. Restart Arduino IDE
+2. Go to **Tools > Manage Libraries**
+3. Search for "RBDdimmer" and install the library by RobotDyn
+4. Search and install each other library listed above
+5. Restart Arduino IDE
+
+**RobotDyn Library Installation:**
+- Install through Arduino IDE Library Manager
+- Or download from: https://github.com/RobotDynOfficial/RBDDimmer
+
+</details>
+
+<details>
+<summary><b>🔥 Firebase Credentials Setup</b></summary>
+
+**ESP8266 Configuration:**
+
+1. **Copy Sample File**:
+   ```bash
+   # Navigate to ESP8266 project folder
+   cd source/esp8266/SmartFan/
+   
+   # Copy the sample credentials file
+   cp firebase_credentials.h.sample firebase_credentials.h
+   ```
+
+2. **Edit Firebase Credentials** (`firebase_credentials.h`):
+   ```cpp
+   // Firebase Web API Key (from Firebase Console > Project Settings > General)
+   #define API_KEY "your-web-api-key-here"
+   
+   // Firebase Realtime Database URL
+   #define DATABASE_URL "https://your-project-id-default-rtdb.firebaseio.com/"
+   
+   // Service Account Authentication
+   #define FIREBASE_PROJECT_ID "your-project-id"
+   #define FIREBASE_CLIENT_EMAIL "firebase-adminsdk-xxxxx@your-project-id.iam.gserviceaccount.com"
+   
+   // Private Key (from Service Account JSON file - keep the \n characters!)
+   #define PRIVATE_KEY "-----BEGIN PRIVATE KEY-----\n" \
+   "your-private-key-content-here\n" \
+   "-----END PRIVATE KEY-----\n"
+   
+   // WiFi Configuration (optional - can be set via WiFiManager)
+   #define WIFI_SSID "your-wifi-network-name"
+   #define WIFI_PASSWORD "your-wifi-password"
+   
+   // Device Configuration
+   #define DEVICE_ID "SmartFan_ESP8266_001"
+   ```
+
+**Getting Firebase Credentials:**
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Select your project (or create a new one)
+3. **For Web API Key**: Go to Project Settings > General
+4. **For Service Account**: 
+   - Go to Project Settings > Service Accounts
+   - Click "Generate new private key"
+   - Download JSON file and extract required information
+
+</details>
+
+<details>
+<summary><b>📱 Android Google Services Setup</b></summary>
+
+1. **Copy Sample File**:
+   ```bash
+   cd source/android/SmartFan/app/
+   cp google-services.json.sample google-services.json
+   ```
+
+2. **Replace with Actual File**:
+   - Go to Firebase Console > Project Settings > General
+   - Add your Android app if not already added
+   - Download the `google-services.json` file for your Android app
+   - Replace the sample file with the downloaded file
+
+3. **Verify Package Name**:
+   - Ensure the package name in `google-services.json` matches `com.qppd.smartfan`
+   - Or update the package name in your Firebase project
+
+</details>
+
+<details>
+<summary><b>🔒 Security Notes</b></summary>
+
+⚠️ **Important Security Guidelines:**
+
+- **Never commit actual credential files** (`firebase_credentials.h` and `google-services.json`) to version control
+- **These files are already included in `.gitignore`** to prevent accidental commits
+- **Use environment variables** for production deployments
+- **Rotate Firebase keys regularly** for enhanced security
+- **Set up Firebase Security Rules** to protect your database
+
+**Firebase Security Rules Example:**
+```json
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid"
+      }
+    },
+    "devices": {
+      "$deviceId": {
+        ".read": "auth != null && root.child('devices').child($deviceId).child('owner').val() === auth.uid",
+        ".write": "auth != null && root.child('devices').child($deviceId).child('owner').val() === auth.uid"
+      }
+    }
+  }
+}
+```
 
 </details>
 
@@ -477,7 +670,7 @@ Install these libraries in Arduino IDE:
    ```
 
 2. **🔧 Configure ESP8266 (WiFi Manager)**:
-   - Edit `source/esp8266/SmartFan/firebase_credentials.h`
+   - Edit `source/esp8266/SmartFan/firebase_credentials.h` with your Firebase credentials
    - Set your Firebase project credentials
    - Configure default WiFi fallback credentials (optional)
 
@@ -637,21 +830,104 @@ Install these libraries in Arduino IDE:
 3. **Authentication**: Verify Firebase security rules and project settings
 4. **Database Structure**: Ensure proper Firebase database schema
 
+**NTP Time Sync Issues (ESP8266):**
+1. **Problem**: NTP shows success but time is 1970
+   - **Cause**: ESP8266 not receiving valid time data from NTP servers
+   - **Check Router/Firewall**: Ensure UDP port 123 (NTP) is not blocked
+   - **Check ISP Blocking**: Some ISPs block NTP traffic
+   - **Try Mobile Hotspot**: Test with phone's mobile data
+
+2. **DNS Server Issues**:
+   - Change DNS servers in router to Google DNS (8.8.8.8, 8.8.4.4) or Cloudflare (1.1.1.1, 1.0.0.1)
+   - Add manual DNS to ESP8266 code: `WiFi.config(ip, gateway, subnet, dns1, dns2);`
+
+3. **Network Connectivity Tests**:
+   ```bash
+   # Test NTP accessibility (Windows PowerShell)
+   Test-NetConnection -ComputerName pool.ntp.org -Port 123
+   
+   # Check DNS resolution
+   ping pool.ntp.org
+   ping time.google.com
+   ```
+
+4. **Router Configuration**:
+   - Restart router
+   - Check if MAC address filtering is enabled
+   - Verify router firmware is up to date
+   - Ensure NTP is enabled on router (some routers block NTP for security)
+
+**Code Improvements for NTP Issues**:
+- Enhanced NTP setup with multiple server testing
+- Longer timeout periods for slow connections
+- Better error detection and fallback time setting
+- Improved diagnostics with DNS verification before NTP attempts
+
+</details>
+
+<details>
+<summary><b>🔧 RobotDyn TRIAC Integration Issues</b></summary>
+
+**TRIAC Not Responding:**
+1. **Library Installation**: Ensure RBDdimmer library is properly installed
+   ```bash
+   # Install via Arduino IDE Library Manager
+   # Search: "RBDdimmer"
+   # Or download: https://github.com/RobotDynOfficial/RBDDimmer
+   ```
+
+2. **Pin Configuration Update**: Verify GPIO pins match RobotDyn requirements
+   - **TRIAC Output**: GPIO18 (updated from GPIO12)
+   - **Zero Cross Detection**: GPIO5 (updated from GPIO2)
+
+3. **Wiring Verification**:
+   - Check TRIAC module connections to ESP32
+   - Verify zero-cross detection circuit is functioning
+   - Ensure proper AC phase detection wiring
+
+4. **Testing and Calibration**:
+   ```cpp
+   // Uncomment in setup() to test TRIAC functionality
+   testTRIACDimmer();
+   
+   // Tests power levels: 0%, 25%, 50%, 75%, 100%
+   // Each level held for 2 seconds
+   // Monitor serial output for power readings
+   ```
+
+**Common RobotDyn Issues**:
+- **No dimming response**: Check zero-cross pin connection (GPIO5)
+- **Erratic behavior**: Verify AC phase detection wiring
+- **Library errors**: Ensure RBDdimmer library compatibility
+- **Power level mismatch**: Library may adjust values internally
+
+**Safety Considerations**:
+- Always use proper AC isolation when working with mains voltage
+- Test with low-voltage AC sources first
+- The TRIAC module should include optical isolation
+- Never work on live AC circuits without proper safety equipment
+
 </details>
 
 <details>
 <summary><b>⚡ Fan Control & Hardware Issues</b></summary>
 
 **Fan Not Responding:**
-1. **TRIAC Wiring**: Check TRIAC module connections and zero-cross detection (GPIO2)
+1. **TRIAC Wiring**: Check TRIAC module connections and zero-cross detection (GPIO5, updated from GPIO2)
 2. **AC Power**: Verify proper AC wiring and safety isolation
-3. **Control Signal**: Monitor ESP32 PWM output (GPIO12) with oscilloscope
+3. **Control Signal**: Monitor ESP32 PWM output (GPIO18, updated from GPIO12) with oscilloscope
 4. **Load Testing**: Test TRIAC module with resistive load first
 
+**RobotDyn TRIAC Module Issues**:
+- **Hardware Requirements**: RobotDyn AC Dimmer Module + ESP32
+- **Zero-cross detection**: Usually included with RobotDyn module
+- **Pin Compatibility**: ESP32 GPIO18/GPIO5 based on RobotDyn library chart
+
 **Excessive Power Consumption:**
-- Check current sensor calibration and scaling factors
+- Check current sensor calibration and scaling factors (ACS712: 0.185V/A)
 - Verify TRIAC switching timing and zero-cross synchronization
 - Monitor for partial switching or continuous AC conduction
+- Note: Using fixed 220V value for power calculations (voltage sensor removed)
 
 </details>
 
@@ -701,21 +977,63 @@ Firebase connected successfully
 
 ```mermaid
 graph TB
-    A[ESP32 Device] --> B[DHT22 Sensor]
-    A --> C[ACS712 Current]
-    A --> D[ZMPT101B Voltage]
-    A --> E[TRIAC Module]
-    A --> F[Buzzer]
-    A --> G[Firebase]
+    subgraph "ESP32 Hardware Controller"
+        A[ESP32] --> B[DHT22 Sensor<br/>GPIO4]
+        A --> C[ACS712 Current<br/>GPIO34]
+        A --> E[TRIAC Module<br/>GPIO18/GPIO5]
+        A --> F[Piezo Buzzer<br/>GPIO25]
+        A --> G[Serial Comm<br/>GPIO16/GPIO17]
+    end
     
-    H[Android App] --> G
-    G --> I[Authentication]
-    G --> J[Realtime Database]
-    G --> K[Cloud Messaging]
+    subgraph "ESP8266 WiFi Manager"
+        H[ESP8266] --> I[WiFi Manager]
+        H --> J[Firebase Client]
+        H --> K[Serial Comm<br/>D6/D7]
+        H --> L[WiFi Reset<br/>D3]
+    end
     
-    L[User] --> H
-    E --> M[AC Fan Motor]
+    subgraph "Cloud Services"
+        M[Firebase Auth]
+        N[Realtime Database] 
+        O[Cloud Messaging]
+        P[Security Rules]
+    end
+    
+    subgraph "Mobile App"
+        Q[Android App]
+        R[Material Design UI]
+        S[Device Management]
+        T[Real-time Monitoring]
+    end
+    
+    subgraph "Hardware"
+        U[AC Fan Motor]
+        V[Zero Cross Detection]
+        W[TRIAC Control Circuit]
+    end
+    
+    G -.->|9600 baud| K
+    E --> V
+    E --> W
+    W --> U
+    J --> M
+    J --> N
+    J --> O
+    J --> P
+    Q --> M
+    Q --> N
+    Q --> O
+    
+    style A fill:#1976D2,stroke:#fff,stroke-width:2px,color:#fff
+    style H fill:#FF5722,stroke:#fff,stroke-width:2px,color:#fff
+    style U fill:#4CAF50,stroke:#fff,stroke-width:2px,color:#fff
 ```
+
+**Key Architecture Updates (September 2025):**
+- **Voltage Sensor Removed**: GPIO35 freed up, using fixed 220V value
+- **RobotDyn TRIAC Integration**: GPIO18/GPIO5 (updated from GPIO12/GPIO2)
+- **Serial Communication Validated**: 9600 baud confirmed stable in production
+- **All Core Modules Working**: DHT22, TRIAC, buzzer, and ESP communication operational
 
 ### 📊 Database Structure
 
@@ -779,31 +1097,53 @@ graph TB
 ```
 SmartFan/
 ├── 📊 diagram/                     # Circuit diagrams and schematics
-│   ├── SmartFan.fzz              # Fritzing project file
+│   ├── SmartFan.fzz              # Fritzing project file  
 │   └── SmartFan.png              # Circuit diagram image
-├── 🔮 model/                      # Reserved for future ML models
+├── � CONFIG_SETUP.md             # ⚠️ TO BE REMOVED - Merged into README
+├── 📄 README.md                   # Main project documentation
 └── 💻 source/
-    ├── 📱 android/SmartFan/       # Android application
+    ├── 📄 ESP_COMMUNICATION_GUIDE.md    # ⚠️ TO BE REMOVED - Merged into README
+    ├── � ESP_Communication_Test_Guide.txt
+    ├── � WIRING_GUIDE.md              # ⚠️ TO BE REMOVED - Merged into README
+    ├── �📱 android/SmartFan/            # Android application
     │   ├── 📱 app/
     │   │   ├── 🔑 src/main/java/com/qppd/smartfan/
-    │   │   │   ├── auth/          # Authentication activities
-    │   │   │   ├── device/        # Device management
-    │   │   │   ├── ui/            # Main UI components
-    │   │   │   └── utils/         # Utilities and helpers
-    │   │   ├── 🎨 src/main/res/   # Resources (layouts, drawables)
-    │   │   └── 🔥 google-services.json
-    │   └── 🏗️ build.gradle
-    └── 🧠 esp/SmartFan/           # ESP32 firmware
-        ├── SmartFan.ino           # Main application logic
-        ├── 🌡️ DHTSensor.cpp/.h    # Temperature/humidity sensor
-        ├── ⚡ CURRENTSensor.cpp/.h # Current measurement
-        ├── 🎛️ TRIACModule.cpp/.h   # TRIAC control
-        ├── 🎯 PIDConfig.cpp/.h     # PID control logic
-        ├── 🔊 BUZZERConfig.cpp/.h  # Buzzer alerts
-        ├── 🔥 FirebaseConfig.cpp/.h # Cloud integration
-        ├── 📡 firebase_credentials.h # Credentials
-        └── 📌 PinConfig.h          # Pin assignments
-        Note: VOLTAGESensor removed - using fixed 220V
+    │   │   │   ├── auth/               # Authentication activities  
+    │   │   │   ├── device/             # Device management & WiFi setup
+    │   │   │   ├── MainActivity.java   # Main dashboard activity
+    │   │   │   ├── SettingsActivity.java
+    │   │   │   ├── HistoryActivity.java
+    │   │   │   └── MyFirebaseMessagingService.java
+    │   │   ├── 🎨 src/main/res/        # Resources (layouts, drawables, values)
+    │   │   ├── 🔥 google-services.json.sample
+    │   │   └── 🔥 google-services.json # ⚠️ Add your Firebase config
+    │   ├── 🏗️ build.gradle
+    │   └── 🏗️ settings.gradle
+    ├── 🧠 esp32/SmartFan/              # ESP32 firmware (Hardware Controller)
+    │   ├── SmartFan.ino               # Main application logic
+    │   ├── 🌡️ DHTSensor.cpp/.h         # DHT22 temperature/humidity sensor
+    │   ├── ⚡ CURRENTSensor.cpp/.h      # ACS712 current measurement  
+    │   ├── 🎛️ TRIACModule.cpp/.h        # RobotDyn TRIAC control (GPIO18/GPIO5)
+    │   ├── 🔊 BUZZERConfig.cpp/.h       # Piezo buzzer alerts
+    │   ├── 📡 ESPCommunication.cpp/.h   # Serial communication with ESP8266
+    │   ├── � PinConfig.h              # Pin assignments (updated pins)
+    │   └── 📄 ROBOTDYN_INTEGRATION.md  # ⚠️ TO BE REMOVED - Merged into README
+    └── 🌐 esp8266/SmartFan/            # ESP8266 firmware (WiFi & Firebase)
+        ├── SmartFan.ino               # Main application logic
+        ├── 🔥 FirebaseConfig.cpp/.h     # Firebase integration & cloud messaging
+        ├── 🌐 WiFiManager.cpp/.h        # WiFi management & captive portal
+        ├── ⏰ NTPConfig.cpp/.h          # Network time protocol
+        ├── 📡 ESPCommunication.cpp/.h   # Serial communication with ESP32
+        ├── 📌 PinConfig.h              # Pin assignments
+        ├── 🔑 firebase_credentials.h.sample
+        ├── 🔑 firebase_credentials.h    # ⚠️ Add your Firebase credentials
+        └── 📄 TROUBLESHOOTING_NTP_FIREBASE.md # ⚠️ TO BE REMOVED - Merged into README
+
+Notes:
+- ❌ Voltage sensor (ZMPT101B) removed - using fixed 220V value 
+- ✅ RobotDyn TRIAC library integration complete
+- ✅ All ESP32 GPIO pins updated for RobotDyn compatibility
+- ⚠️ Markdown files marked for removal after content merge
 ```
 
 </details>
@@ -815,21 +1155,32 @@ SmartFan/
 ### ⚙️ ESP32 Firmware Configuration
 
 <details>
-<summary><b>🎯 PID Controller Tuning</b></summary>
+<summary><b>�️ Temperature-Based Fan Control</b></summary>
 
-**Default PID Parameters:**
+**Automatic Fan Speed Logic:**
+Based on temperature difference from target:
 ```cpp
-// In PIDConfig.h
-#define DEFAULT_KP 2.0    // Proportional gain
-#define DEFAULT_KI 0.1    // Integral gain  
-#define DEFAULT_KD 0.05   // Derivative gain
-#define SETPOINT 26.0     // Target temperature (°C)
+// Fan control logic in ESP32 SmartFan.ino
+if (tempDiff >= 3.0) {
+    fanSpeed = 100;  // Maximum speed
+} else if (tempDiff >= 2.0) {
+    fanSpeed = 80;   // High speed
+} else if (tempDiff >= 1.0) {
+    fanSpeed = 60;   // Medium speed
+} else if (tempDiff >= 0.5) {
+    fanSpeed = 40;   // Low speed
+} else {
+    fanSpeed = 25;   // Minimum speed
+}
 ```
 
-**Tuning Guidelines:**
-- **Kp**: Increase for faster response, decrease if oscillating
-- **Ki**: Increase to eliminate steady-state error
-- **Kd**: Increase to reduce overshoot and oscillation
+**Temperature Thresholds:**
+- **+3°C or more**: 100% fan speed + buzzer alert
+- **+2°C to +3°C**: 80% fan speed  
+- **+1°C to +2°C**: 60% fan speed
+- **+0.5°C to +1°C**: 40% fan speed
+- **0°C to +0.5°C**: 25% fan speed
+- **Below target**: 10% minimum speed
 
 </details>
 
