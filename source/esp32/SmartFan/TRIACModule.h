@@ -43,5 +43,6 @@ private:
     
     // RobotDyn Dimmer object
     dimmerLamp* _dimmer;
+};
 
 #endif // TRIACMODULE_H
