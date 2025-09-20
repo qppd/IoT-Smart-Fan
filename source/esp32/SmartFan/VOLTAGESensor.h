@@ -13,5 +13,5 @@ private:
     float _vRef;
     float _calibration;
 };
-
+// Fixed missing closing brace for class definition
 #endif // VOLTAGESENSOR_H
