@@ -46,8 +46,14 @@
 ---
 
 
+
 ## 📋 Recent Updates (September 2025)
 
+### ✅ Major System Milestone: All Core Features Working
+- **Serial Communication (ESP8266 ↔ ESP32)**: Fully operational, robust, and reliable at 9600 baud. Real-time data and command exchange confirmed.
+- **DHT22 Sensor**: Stable temperature and humidity readings, integrated with automation logic.
+- **TRIAC Fan Control**: Precision phase angle control (RobotDyn library), 0–100% sweep validated, zero-cross detection stable.
+- **Buzzer Alerts**: Over-temperature and remote-triggered alerts working as intended.
 
 ### 🔧 TRIACModule PWM Integration
 - ✨ **New Hardware Control**: `TRIACModule` for precision phase angle control (universal motor fans)
@@ -55,12 +61,10 @@
 - 📈 **Performance**: Power sweep 0–100% validated, interrupt-driven zero-cross detection
 - 🔄 **RobotDyn Compatible**: Adapted for ESP32, modular and extensible
 
-
 ### 📶 WiFi Management Enhancements
 - 🌐 **WiFiManager**: Captive portal for first-time setup and reconfiguration
 - 📱 **App WiFi Setup**: Configure device WiFi via Android app
 - 🔄 **Hardware Reset**: Button for WiFi reset (hold 3s)
-
 
 ### ⚡ Power Monitoring System
 - 📊 **Comprehensive Monitoring**: Real-time voltage, current, power (W), and energy (kWh)
@@ -73,9 +77,10 @@
 ## 📡 Dual-ESP Communication Architecture
 
 
+
 ### 🏗️ System Architecture Overview
 
-The SmartFan system utilizes a specialized dual-ESP architecture where two microcontrollers work together via serial communication to provide robust, fault-tolerant operation:
+The SmartFan system utilizes a specialized dual-ESP architecture where two microcontrollers work together via serial communication to provide robust, fault-tolerant operation. **As of September 2025, serial communication, DHT22, TRIAC, and buzzer modules are all fully functional and validated in production.**
 
 
 **ESP8266 (WiFi & Firebase Module):**
@@ -87,11 +92,11 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 
 
 **ESP32 (Sensor & Hardware Module):**
-- DHT22: Temperature/humidity sensor
+- DHT22: Temperature/humidity sensor (**fully working**)
 - ACS712: Current sensor (RMS, calibrated)
 - ZMPT101B: Voltage sensor (true RMS)
-- TRIAC: Fan speed control (phase angle, PWM)
-- Piezo buzzer: Alerts for over-temperature
+- TRIAC: Fan speed control (phase angle, PWM) (**fully working**)
+- Piezo buzzer: Alerts for over-temperature (**fully working**)
 - Automatic/manual fan control logic
 - Hardware safety monitoring and error detection
 
@@ -100,7 +105,7 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 
 
 **Serial Connection:**
-- **Baud Rate**: 9600 bps
+- **Baud Rate**: 9600 bps (**confirmed stable**)
 - **ESP8266**: D6 (RX), D7 (TX) — SoftwareSerial
 - **ESP32**: GPIO16 (RX), GPIO17 (TX) — HardwareSerial2
 - **Wiring**: ESP8266 TX (D7) → ESP32 RX (GPIO16), ESP8266 RX (D6) → ESP32 TX (GPIO17)
@@ -110,7 +115,7 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 ### 📨 Communication Protocol
 
 
-**Message Format:** `<TYPE:DATA>` (delimited, robust parsing)
+**Message Format:** `<TYPE:DATA>` (delimited, robust parsing, **validated in production**)
 
 
 **ESP32 → ESP8266 (Sensor Data):**
@@ -120,7 +125,7 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 <VOLT:220.0>    // Voltage (V)
 <CURR:0.8>      // Current (A)
 <FAN:75>        // Fan speed (0-100%)
-<BUZZ:ON>       // Buzzer status
+<BUZZ:ON>       // Buzzer status (now fully implemented)
 <STATUS:RUNNING> // System status
 <ALL:25.5,65.0,220.0,0.8,75> // Combined data
 ```
@@ -134,7 +139,7 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 <SET_TEMP:28.0>       // Set target temperature
 <FIREBASE:CONNECTED>  // Firebase status
 <WIFI:CONNECTED>      // WiFi status
-<BUZZ:ALERT>          // Trigger buzzer
+<BUZZ:ALERT>          // Trigger buzzer (now fully implemented)
 ```
 
 
@@ -142,14 +147,14 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 
 
 **Normal Operation Cycle:**
-1. **ESP32**: Reads sensors every 2s, sends data every 5s
+1. **ESP32**: Reads sensors every 2s, sends data every 5s (**DHT, TRIAC, buzzer all validated**)
 2. **ESP8266**: Syncs to Firebase every 5s, sends notifications every 30s, requests data every 3s
 
 
 **Remote Command Flow:**
 1. **App/Firebase** → **ESP8266**: Receives commands
-2. **ESP8266** → **ESP32**: Forwards hardware commands
-3. **ESP32**: Executes, confirms, and reports
+2. **ESP8266** → **ESP32**: Forwards hardware commands (serial comms fully working)
+3. **ESP32**: Executes, confirms, and reports (DHT, TRIAC, buzzer all working)
 4. **ESP8266**: Logs to Firebase
 
 
@@ -161,12 +166,14 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 - Connection health checks (ping/pong)
 - Fallback: ESP32 runs autonomously if comms lost
 - Error alerts: ESP8266 notifies Firebase
+- **All communication and error handling paths validated in production**
 
 
 **Sensor Validation:**
 - Range checking, NaN filtering
 - ESP32 sends error status to ESP8266
 - Safe fallback values on error
+- **DHT, TRIAC, and buzzer error handling confirmed**
 
 ---
 
@@ -567,6 +574,7 @@ Install these libraries in Arduino IDE:
 
 ## � Troubleshooting & Monitoring
 
+
 ### 🚨 Common Issues
 
 <details>
@@ -577,15 +585,17 @@ Install these libraries in Arduino IDE:
    - ESP8266 D7 (TX) → ESP32 GPIO16 (RX)
    - ESP8266 D6 (RX) → ESP32 GPIO17 (TX)
    - Connect GND pins of both boards
-2. **Verify Baud Rate**: Ensure both boards use 9600 baud
+2. **Verify Baud Rate**: Ensure both boards use 9600 baud (**now confirmed stable**)
 3. **Power Supply**: Check stable power to both ESP boards
 4. **Serial Monitor**: Review error messages in both ESP serial outputs
 
 **Message Timeouts or Corrupted Data:**
 - Check for loose connections or electromagnetic interference
-- Verify message format compliance: `<TYPE:DATA>`
+- Verify message format compliance: `<TYPE:DATA>` (**now validated in production**)
 - Monitor for buffer overflow or memory issues
 - Ensure proper message delimiter parsing
+
+**If all above are correct and issues persist, check for firmware updates. As of September 2025, serial comms, DHT, TRIAC, and buzzer are all confirmed working.**
 
 </details>
 
