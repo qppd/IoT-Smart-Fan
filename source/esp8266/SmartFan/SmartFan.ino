@@ -33,6 +33,54 @@ const unsigned long NOTIFICATION_INTERVAL = 120000; // Send notifications every 
 const unsigned long ESP32_REQUEST_INTERVAL = 3000;  // Request ESP32 data every 3 seconds
 const unsigned long CONN_CHECK_INTERVAL = 15000;   // Check ESP32 connection every 15 seconds
 
+// LED indicator control functions
+void setLEDState(bool state) {
+    digitalWrite(LED_PIN, state ? HIGH : LOW);
+}
+
+void blinkLED(int times, int delayMs = 200) {
+    for (int i = 0; i < times; i++) {
+        digitalWrite(LED_PIN, HIGH);
+        delay(delayMs);
+        digitalWrite(LED_PIN, LOW);
+        if (i < times - 1) delay(delayMs);
+    }
+}
+
+void updateLEDStatus() {
+    static unsigned long lastLEDUpdate = 0;
+    static bool ledState = false;
+    
+    if (millis() - lastLEDUpdate > 1000) {  // Update LED status every second
+        if (!WiFi.isConnected()) {
+            // WiFi disconnected - fast blink
+            ledState = !ledState;
+            setLEDState(ledState);
+        } else if (!firebaseManager.isReady()) {
+            // WiFi connected but Firebase not ready - slow blink
+            static int blinkCounter = 0;
+            if (blinkCounter % 2 == 0) {
+                ledState = !ledState;
+                setLEDState(ledState);
+            }
+            blinkCounter = (blinkCounter + 1) % 4;
+        } else if (!fanData.esp32Connected) {
+            // Firebase ready but ESP32 disconnected - double blink pattern
+            static int patternStep = 0;
+            switch (patternStep) {
+                case 0: case 2: setLEDState(HIGH); break;
+                case 1: case 3: setLEDState(LOW); break;
+                default: setLEDState(LOW); break;
+            }
+            patternStep = (patternStep + 1) % 6;
+        } else {
+            // All systems operational - solid on
+            setLEDState(true);
+        }
+        lastLEDUpdate = millis();
+    }
+}
+
 void setup() {
     Serial.begin(115200);
     Serial.println();
@@ -42,13 +90,22 @@ void setup() {
     Serial.printf("Initial Free Heap: %d bytes\n", ESP.getFreeHeap());
     Serial.printf("Initial Heap Fragmentation: %d%%\n", ESP.getHeapFragmentation());
     
+    // Initialize pins
     pinMode(WIFI_RESET_PIN, INPUT_PULLUP);
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);  // Start with LED off
+    
+    // Indicate startup with LED blink
+    blinkLED(3, 100);
     
     // Initialize WiFi and Firebase
     setupWiFi();
     
     // Check memory after WiFi setup
     Serial.printf("After WiFi - Free Heap: %d bytes\n", ESP.getFreeHeap());
+    
+    // WiFi connected indicator
+    blinkLED(2, 150);
     
     firebaseManager.begin();
     
@@ -62,6 +119,9 @@ void setup() {
     
     Serial.println("Smart Fan ESP8266 Initialized Successfully!");
     Serial.printf("Final Free Heap: %d bytes\n", ESP.getFreeHeap());
+    
+    // Initialization complete indicator
+    blinkLED(5, 100);
     
     // Send initial notification - TEMPORARILY DISABLED
     delay(2000);
@@ -110,6 +170,9 @@ void loop() {
     
     // Handle WiFi reset button
     handleWiFiReset();
+    
+    // Update LED status indicator
+    updateLEDStatus();
     
     delay(100); // Small delay to prevent watchdog reset
 }
@@ -238,22 +301,41 @@ void sendStatusNotification() {
 }
 
 void handleWiFiReset() {
+    static unsigned long resetStartTime = 0;
+    static bool resetIndicatorShown = false;
+    
     if (digitalRead(WIFI_RESET_PIN) == LOW) {
-        static unsigned long resetStartTime = 0;
         if (resetStartTime == 0) {
             resetStartTime = millis();
+            resetIndicatorShown = false;
+        }
+        
+        // Show visual feedback during reset process
+        if (!resetIndicatorShown && (millis() - resetStartTime > 1000)) {
+            // Rapid blink to indicate reset button detected
+            blinkLED(10, 50);
+            resetIndicatorShown = true;
         }
         
         // If button held for 3 seconds, reset WiFi
         if (millis() - resetStartTime > 3000) {
             Serial.println("WiFi Reset requested!");
+            
+            // Show reset confirmation with long blinks
+            for (int i = 0; i < 3; i++) {
+                digitalWrite(LED_PIN, HIGH);
+                delay(500);
+                digitalWrite(LED_PIN, LOW);
+                delay(500);
+            }
+            
             firebaseManager.resetWiFiSettings();
             resetStartTime = 0;
         }
     } else {
         // Button released
-        static unsigned long resetStartTime = 0;
         resetStartTime = 0;
+        resetIndicatorShown = false;
     }
 }
 
