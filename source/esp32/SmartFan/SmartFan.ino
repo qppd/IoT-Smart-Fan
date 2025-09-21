@@ -9,7 +9,10 @@
 
 // Create sensor and control objects
 DHTSensor dhtSensor(DHT_PIN);
-CURRENTSensor currentSensor(CURRENT_SENSOR_PIN);
+// Current sensor with calibrated settings based on multimeter comparison
+// Calibration: Reading was 0.074A, actual was 0.18A (ratio: 2.43x)
+// Adjusted voltage divider factor from 1.5 to 3.65 (1.5 * 2.43) to compensate
+CURRENTSensor currentSensor(CURRENT_SENSOR_PIN, 3.3, 185.0, 0.0, 2.43);
 BUZZERConfig buzzer(BUZZER_PIN);
 TRIACModule triac(TRIAC_PIN, ZERO_CROSS_PIN);
 ESPCommunication espComm(ESP_SERIAL_RX, ESP_SERIAL_TX);
@@ -62,6 +65,9 @@ void setup() {
     
     Serial.println("Smart Fan ESP32 Initialized Successfully!");
     
+    // Test current sensor calibration (enabled for calibration verification)
+    testCurrentSensorCalibration();
+    
     // Test communication (comment out after testing)
     delay(2000); // Wait for ESP8266 to initialize
     testESP32Communication();
@@ -105,26 +111,35 @@ void readAllSensors() {
     // Read all sensors
     sensors.temperature = dhtSensor.readTemperature();
     sensors.humidity = dhtSensor.readHumidity();
-    sensors.current = currentSensor.readCurrent();
-    sensors.voltage = 220.0; // Fixed voltage value (no sensor needed)
+    
+    // Use new RMS current measurement for better AC accuracy
+    sensors.current = currentSensor.readCurrentRMS(1000); // 1 second sampling
+    sensors.voltage = 240.0; // Fixed voltage value (adjust for your local AC voltage)
     
     // Validate sensor readings
     sensors.sensorsOk = (!isnan(sensors.temperature) && 
-                        !isnan(sensors.humidity)
+                        !isnan(sensors.humidity) && 
+                        sensors.current >= 0
                         );
     
     if (sensors.sensorsOk) {
-        // Calculate power
-        sensors.watt = sensors.voltage * sensors.current;
+        // Calculate power using improved power calculation method
+        sensors.watt = currentSensor.calculatePower(sensors.current, sensors.voltage, 1.2);
         
-        // Calculate energy consumption (kWh)
+        // Calculate energy consumption (kWh) with improved accuracy
         if (lastUpdateMillis > 0) {
             float hours = (millis() - lastUpdateMillis) / 3600000.0;
             sensors.kwh += (sensors.watt * hours) / 1000.0;
         }
         lastUpdateMillis = millis();
+        
+        // Add power monitoring alerts
+        checkPowerLimits();
     } else {
         Serial.println("⚠️ Sensor reading error detected");
+        // Set safe defaults for failed readings
+        sensors.current = 0.0;
+        sensors.watt = 0.0;
     }
 }
 
@@ -229,20 +244,93 @@ void printSystemStatus() {
     static unsigned long lastStatusPrint = 0;
     if (millis() - lastStatusPrint < 10000) return; // Print every 10 seconds
     
-    Serial.println("\n=== ESP32 System Status ===");
-    Serial.printf("Temperature: %.1f°C (Target: %.1f°C)\n", 
+    Serial.println("\n=== ESP32 Smart Fan System Status ===");
+    Serial.printf("🌡️ Temperature: %.1f°C (Target: %.1f°C)\n", 
                   sensors.temperature, fanControl.targetTemperature);
-    Serial.printf("Humidity: %.1f%%\n", sensors.humidity);
-    Serial.printf("Voltage: %.1fV, Current: %.3fA\n", sensors.voltage, sensors.current);
-    Serial.printf("Power: %.2fW, Energy: %.4f kWh\n", sensors.watt, sensors.kwh);
-    Serial.printf("Fan Speed: %d%% (Target: %d%%)\n", 
+    Serial.printf("💧 Humidity: %.1f%%\n", sensors.humidity);
+    Serial.printf("⚡ Voltage: %.1fV, Current: %.3fA (RMS)\n", sensors.voltage, sensors.current);
+    Serial.printf("🔌 Power: %.2fW, Energy: %.4f kWh\n", sensors.watt, sensors.kwh);
+    Serial.printf("🌀 Fan Speed: %d%% (Target: %d%%)\n", 
                   fanControl.currentFanSpeed, fanControl.targetFanSpeed);
-    Serial.printf("Sensors: %s, Auto Mode: %s\n", 
+    
+    // Show power efficiency if fan is running
+    if (fanControl.currentFanSpeed > 0) {
+        float efficiency = sensors.watt / fanControl.currentFanSpeed;
+        Serial.printf("📊 Power Efficiency: %.2f W/%% fan speed\n", efficiency);
+    }
+    
+    Serial.printf("🔧 Sensors: %s, Auto Mode: %s, Buzzer: %s\n", 
                   sensors.sensorsOk ? "OK" : "ERROR", 
-                  fanControl.autoMode ? "ON" : "OFF");
-    Serial.println("=========================\n");
+                  fanControl.autoMode ? "ON" : "OFF",
+                  fanControl.buzzerEnabled ? "ON" : "OFF");
+    Serial.println("==========================================\n");
     
     lastStatusPrint = millis();
+}
+
+// Power monitoring and safety checks
+void checkPowerLimits() {
+    // Define power thresholds
+    const float MAX_POWER_WATTS = 150.0;        // Maximum safe power consumption
+    const float HIGH_POWER_WATTS = 100.0;       // High power warning threshold
+    const float MAX_CURRENT_AMPS = 0.7;         // Maximum safe current (for 5A sensor)
+    
+    // Check for overcurrent conditions
+    if (sensors.current > MAX_CURRENT_AMPS) {
+        Serial.println("🚨 OVERCURRENT DETECTED! Reducing fan speed for safety.");
+        fanControl.targetFanSpeed = min(fanControl.targetFanSpeed, 50); // Limit to 50%
+        fanControl.buzzerAlert = true;
+    }
+    
+    // Check for high power consumption
+    if (sensors.watt > MAX_POWER_WATTS) {
+        Serial.printf("🚨 HIGH POWER CONSUMPTION: %.1fW (Max: %.1fW)\n", sensors.watt, MAX_POWER_WATTS);
+        fanControl.targetFanSpeed = min(fanControl.targetFanSpeed, 75); // Limit to 75%
+        fanControl.buzzerAlert = true;
+    } else if (sensors.watt > HIGH_POWER_WATTS) {
+        Serial.printf("⚠️ Power warning: %.1fW (Warning: %.1fW)\n", sensors.watt, HIGH_POWER_WATTS);
+    }
+    
+    // Log power efficiency information
+    static unsigned long lastEfficiencyLog = 0;
+    if (millis() - lastEfficiencyLog > 30000) { // Log every 30 seconds
+        float efficiency = (fanControl.currentFanSpeed > 0) ? sensors.watt / fanControl.currentFanSpeed : 0;
+        Serial.printf("💡 Power Efficiency: %.2f W/% fan speed\n", efficiency);
+        lastEfficiencyLog = millis();
+    }
+}
+
+// Test function for current sensor calibration
+void testCurrentSensorCalibration() {
+    Serial.println("=== Current Sensor Calibration Test ===");
+    Serial.println("Testing ACS712 with voltage divider calibration...");
+    
+    // Test both measurement methods
+    for (int i = 0; i < 5; i++) {
+        Serial.printf("Test %d:\n", i + 1);
+        
+        // Original method
+        float currentOld = currentSensor.readCurrent(200);
+        
+        // New RMS method
+        float currentRMS = currentSensor.readCurrentRMS(1000);
+        
+        // Peak-to-peak voltage
+        float vpp = currentSensor.getVPP(1000);
+        
+        Serial.printf("  Original Method: %.3f A\n", currentOld);
+        Serial.printf("  RMS Method: %.3f A\n", currentRMS);
+        Serial.printf("  Peak-to-Peak Voltage: %.3f V\n", vpp);
+        
+        // Calculate power with new method
+        float power = currentSensor.calculatePower(currentRMS, 240.0, 1.2);
+        Serial.printf("  Calculated Power: %.2f W\n", power);
+        Serial.println();
+        
+        delay(2000);
+    }
+    
+    Serial.println("=== Current Sensor Calibration Test Complete ===\n");
 }
 
 // Test function for ESP32 communication

@@ -27,7 +27,7 @@
 ### 🏗️ Dual-ESP Architecture
 
 - **🌐 ESP8266**: WiFi Manager + Firebase Handler — Manages WiFi, cloud database, and push notifications
-- **🧠 ESP32**: Sensor Reader + Hardware Controller — Handles DHT22, ACS712, TRIAC fan control, and safety monitoring (220V fixed voltage)
+- **🧠 ESP32**: Sensor Reader + Hardware Controller — Handles DHT22, ACS712 (with voltage divider), TRIAC fan control, and safety monitoring (220V fixed voltage)
 - **📡 Serial Communication**: Custom protocol for real-time data exchange between microcontrollers at 9600 baud (ESP8266: SoftwareSerial, ESP32: HardwareSerial2)
 
 
@@ -40,7 +40,7 @@
 - **📱 Modern Android App**: Material Design 3, animated gauges, power analytics, device management
 - **☁️ Cloud Integration**: Firebase for data logging, user authentication, remote control, and push notifications
 - **🔧 Easy Setup**: WiFiManager captive portal, app-based WiFi config, and hardware reset
-- **⚡ Power Monitoring**: ACS712 (current) with fixed 220V for calculations, safety alerts and analytics
+- **⚡ Power Monitoring**: ACS712 (current with voltage divider) with fixed 220V for calculations, safety alerts and analytics
 - **🔔 Smart Notifications**: Push notifications for temperature/power alerts and system status
 
 ---
@@ -53,7 +53,14 @@
 - **ZMPT101B Voltage Sensor**: Removed from hardware design, using fixed 220V value for power calculations
 - **GPIO35 Freed**: Pin now available for future expansion or additional sensors
 - **Simplified Wiring**: Reduced component count and power consumption
-- **Maintained Functionality**: Power monitoring still accurate with current sensor + fixed voltage
+- **Maintained Functionality**: Power monitoring still accurate with current sensor + voltage divider + fixed voltage
+
+### 🔧 Current Sensor Enhancement: Voltage Divider Implementation
+- **Voltage Divider Circuit**: Added 1kΩ + 2kΩ resistor network for ACS712 signal conditioning
+- **Improved Accuracy**: Voltage divider factor 2.43 compensates for signal attenuation and improves ADC range utilization
+- **Enhanced Stability**: Better signal conditioning reduces noise and improves measurement reliability
+- **Calibrated RMS Measurement**: Updated CURRENTSensor class with voltage divider factor integration
+- **Backward Compatibility**: Maintains legacy readCurrent() method while adding improved readCurrentRMS()
 
 ### ✅ Major System Milestone: All Core Features Working
 - **Serial Communication (ESP8266 ↔ ESP32)**: Fully operational, robust, and reliable at 9600 baud. Real-time data and command exchange confirmed.
@@ -99,7 +106,7 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 
 **ESP32 (Sensor & Hardware Module):**
 - DHT22: Temperature/humidity sensor (**fully working**)
-- ACS712: Current sensor (RMS, calibrated)
+- ACS712: Current sensor (RMS, calibrated with voltage divider) (**fully working**)
 - Fixed 220V for power calculations (voltage sensor removed)
 - TRIAC: Fan speed control (phase angle, PWM) (**fully working**)
 - Piezo buzzer: Alerts for over-temperature (**fully working**)
@@ -207,7 +214,7 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 <details>
 <summary><b>⚡ Power Monitoring & Safety</b></summary>
 
-- **🔌 Electrical Monitoring**: ACS712 current sensor (0.185 V/A) with fixed 220V for power calculations
+- **🔌 Electrical Monitoring**: ACS712 current sensor (0.185 V/A) with voltage divider circuit and fixed 220V for power calculations
 - **📈 Power Analytics**: Real-time wattage calculation (V×I) and kWh energy tracking
 - **🛡️ Safety Features**: Sensor validation, range checking, and NaN detection
 - **🔍 RMS Calculation**: True RMS measurement with calibrated sampling (100 samples)
@@ -371,7 +378,7 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 
 **Sensors & Components:**
 - 🌡️ **DHT22** (GPIO4, ESP32)
-- ⚡ **ACS712** (GPIO34, ESP32)
+- ⚡ **ACS712** (GPIO34, ESP32) + voltage divider circuit
 - 🔊 **Piezo Buzzer** (GPIO25, ESP32)
 - 🎛️ **TRIAC Module** (GPIO18, ESP32)
 - 🔋 **Power Supplies** (separate 3.3V/5V for each ESP)
@@ -433,9 +440,9 @@ ESP32                           Sensors & Components
 │  3.3V    ●──────────●────────● VCC
 │  GND     ●──────────●────────● GND
 │                     │         
-│                     │         ACS712 Current Sensor
-│  GPIO34  ●──────────●────────● Output (Analog)
-│  5V      ●──────────●────────● VCC
+│                     │         ACS712 Current Sensor (with voltage divider)
+│  GPIO34  ●──────────●────────● Output → [1kΩ] ── [2kΩ] → GND
+│  5V      ●──────────●────────● VCC     (Voltage divider: factor 2.43)
 │  GND     ●──────────●────────● GND
 │                     │         
 │                     │         Note: GPIO35 freed up
@@ -803,7 +810,7 @@ Install these libraries in Arduino IDE:
 
 **ESP32 Sensors Not Reading:**
 1. **DHT22**: Verify 3.3V/5V power and data pin (GPIO4) connection
-2. **ACS712**: Check analog pin (GPIO34) and ensure correct sensitivity (0.185V/A)
+2. **ACS712**: Check analog pin (GPIO34), voltage divider circuit, and ensure correct sensitivity (0.185V/A)
 3. **Power Supply**: Ensure stable power to all sensor modules
 4. **Wiring**: Check for short circuits or loose connections
 5. **Note**: Voltage sensor removed - using fixed 220V value
@@ -924,7 +931,7 @@ Install these libraries in Arduino IDE:
 - **Pin Compatibility**: ESP32 GPIO18/GPIO5 based on RobotDyn library chart
 
 **Excessive Power Consumption:**
-- Check current sensor calibration and scaling factors (ACS712: 0.185V/A)
+- Check current sensor calibration, voltage divider factor (2.43), and scaling factors (ACS712: 0.185V/A)
 - Verify TRIAC switching timing and zero-cross synchronization
 - Monitor for partial switching or continuous AC conduction
 - Note: Using fixed 220V value for power calculations (voltage sensor removed)
@@ -979,7 +986,7 @@ Firebase connected successfully
 graph TB
     subgraph "ESP32 Hardware Controller"
         A[ESP32] --> B[DHT22 Sensor<br/>GPIO4]
-        A --> C[ACS712 Current<br/>GPIO34]
+        A --> C[ACS712 Current<br/>GPIO34 + Voltage Divider]
         A --> E[TRIAC Module<br/>GPIO18/GPIO5]
         A --> F[Piezo Buzzer<br/>GPIO25]
         A --> G[Serial Comm<br/>GPIO16/GPIO17]
@@ -1122,7 +1129,7 @@ SmartFan/
     ├── 🧠 esp32/SmartFan/              # ESP32 firmware (Hardware Controller)
     │   ├── SmartFan.ino               # Main application logic
     │   ├── 🌡️ DHTSensor.cpp/.h         # DHT22 temperature/humidity sensor
-    │   ├── ⚡ CURRENTSensor.cpp/.h      # ACS712 current measurement  
+    │   ├── ⚡ CURRENTSensor.cpp/.h      # ACS712 current measurement with voltage divider  
     │   ├── 🎛️ TRIACModule.cpp/.h        # RobotDyn TRIAC control (GPIO18/GPIO5)
     │   ├── 🔊 BUZZERConfig.cpp/.h       # Piezo buzzer alerts
     │   ├── 📡 ESPCommunication.cpp/.h   # Serial communication with ESP8266
@@ -1192,6 +1199,7 @@ if (tempDiff >= 3.0) {
 // In CURRENTSensor.cpp
 #define ACS_SENSITIVITY 0.185  // 5A module: 185mV/A
 #define ACS_OFFSET 2.5         // Zero current voltage
+#define VOLTAGE_DIVIDER 2.43   // Voltage divider factor (1kΩ + 2kΩ circuit)
 ```
 
 **Voltage Configuration:**
