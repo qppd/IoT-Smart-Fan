@@ -117,6 +117,9 @@ void setup() {
     // ESP Communication setup
     espComm.begin(9600);
     
+    // Set ESP communication reference in Firebase manager for real-time control
+    firebaseManager.setESPCommunication(&espComm);
+    
     Serial.println(getCurrentLogPrefix() + "Smart Fan ESP8266 Initialized Successfully!");
     Serial.printf("Final Free Heap: %d bytes\n", ESP.getFreeHeap());
     
@@ -136,6 +139,11 @@ void setup() {
 void loop() {
     // Process incoming data from ESP32
     espComm.processIncomingData();
+    
+    // Handle Firebase streams for real-time control
+    if (firebaseManager.isReady()) {
+        firebaseManager.handleStreams();
+    }
     
     // Update local data with ESP32 sensor readings
     updateDataFromESP32();

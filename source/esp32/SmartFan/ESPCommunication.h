@@ -7,6 +7,7 @@
 struct ControlSettings {
     int targetFanSpeed = 50;
     float targetTemperature = 28.0;
+    bool autoMode = true;           // Added mode control
     bool buzzerEnabled = true;
     String firebaseStatus = "DISCONNECTED";
     String wifiStatus = "DISCONNECTED";

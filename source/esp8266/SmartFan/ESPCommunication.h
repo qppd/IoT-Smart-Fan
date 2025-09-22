@@ -36,6 +36,7 @@ public:
     void sendWiFiStatus(String status);
     void setFanSpeed(int speed);
     void setTargetTemperature(float temp);
+    void setMode(String mode);  // New method for mode control
     void requestAllSensors();
     void requestStatus();
     void triggerBuzzerAlert();

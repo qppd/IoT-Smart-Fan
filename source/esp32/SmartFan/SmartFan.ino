@@ -159,8 +159,9 @@ void updateControlFromESP8266() {
   if (espComm.hasNewCommands()) {
     fanControl.targetFanSpeed = settings.targetFanSpeed;
     fanControl.targetTemperature = settings.targetTemperature;
+    fanControl.autoMode = settings.autoMode;  // Update mode from ESP8266
 
-    Serial.println("📡 Updated from ESP8266: Fan=" + String(fanControl.targetFanSpeed) + "%, Temp=" + String(fanControl.targetTemperature, 1) + "°C");
+    Serial.println("📡 Updated from ESP8266: Fan=" + String(fanControl.targetFanSpeed) + "%, Temp=" + String(fanControl.targetTemperature, 1) + "°C, Mode=" + String(fanControl.autoMode ? "auto" : "manual"));
   }
 }
 

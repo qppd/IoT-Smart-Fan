@@ -146,6 +146,13 @@ void ESPCommunication::processIncomingData() {
         controlSettings.lastUpdate = millis();
         Serial.println("Target temperature set: " + String(newTemp, 1) + "°C");
         
+    } else if (messageType == "SET_MODE") {
+        String mode = messageData;
+        mode.toLowerCase();
+        controlSettings.autoMode = (mode == "auto");
+        controlSettings.lastUpdate = millis();
+        Serial.println("Mode set to: " + mode + " (autoMode=" + String(controlSettings.autoMode ? "true" : "false") + ")");
+        
     } else if (messageType == "FIREBASE") {
         controlSettings.firebaseStatus = messageData;
         controlSettings.lastUpdate = millis();
@@ -213,6 +220,7 @@ void ESPCommunication::printStatus() {
     Serial.println("Last command: " + String((millis() - controlSettings.lastUpdate) / 1000) + " seconds ago");
     Serial.println("Target Fan Speed: " + String(controlSettings.targetFanSpeed) + "%");
     Serial.println("Target Temperature: " + String(controlSettings.targetTemperature, 1) + "°C");
+    Serial.println("Auto Mode: " + String(controlSettings.autoMode ? "ON" : "OFF"));
     Serial.println("Firebase Status: " + controlSettings.firebaseStatus);
     Serial.println("WiFi Status: " + controlSettings.wifiStatus);
     Serial.println("==============================");

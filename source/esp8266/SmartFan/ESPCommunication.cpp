@@ -47,6 +47,10 @@ void ESPCommunication::setTargetTemperature(float temp) {
     sendMessage("SET_TEMP", String(temp, 1));
 }
 
+void ESPCommunication::setMode(String mode) {
+    sendMessage("SET_MODE", mode);
+}
+
 void ESPCommunication::requestAllSensors() {
     sendCommand("GET_SENSORS");
 }

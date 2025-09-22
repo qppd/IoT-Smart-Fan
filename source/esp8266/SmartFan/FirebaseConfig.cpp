@@ -1,4 +1,5 @@
 #include "FirebaseConfig.h"
+#include "ESPCommunication.h"
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
 
@@ -8,7 +9,13 @@ FirebaseManager* globalFirebaseManager = nullptr;
 FirebaseManager::FirebaseManager() {
     tokenCount = 0;
     tokenParentPath = "smartfan";
-    tokenPaths[0] = "/tokens";
+    controlParentPath = "smartfan/devices";
+    deviceId = "SmartFan_ESP8266_001"; // Default device ID
+    espComm = nullptr;
+    lastTokenCheck = 0;
+    controlStreamActive = false;
+    lastMode = "";
+    lastFanSpeed = -1;
     globalFirebaseManager = this;
 }
 
@@ -139,84 +146,188 @@ void FirebaseManager::begin() {
         return;
     }
     
-    // Initialize token stream - TEMPORARILY DISABLED FOR MEMORY OPTIMIZATION
-    // initializeTokenStream();
+    // Initialize streams for real-time monitoring
+    initializeStreams();
 }
 
-void FirebaseManager::initializeTokenStream() {
-    Serial.println("Starting token stream");
-    if (!Firebase.RTDB.beginMultiPathStream(&tokenStream, tokenParentPath)) {
-        Serial.printf("Token stream initialization failed: %s\n", tokenStream.errorReason().c_str());
+void FirebaseManager::setESPCommunication(ESPCommunication* comm) {
+    espComm = comm;
+}
+
+void FirebaseManager::initializeStreams() {
+    Serial.println("Initializing Firebase streams...");
+    
+    // Initialize control stream for real-time manual/auto and fan speed monitoring
+    initializeControlStream();
+    
+    // Load tokens once at startup (non-streaming)
+    loadTokensFromDatabase();
+    
+    Serial.println("Firebase streams initialization completed!");
+}
+
+void FirebaseManager::initializeControlStream() {
+    String controlPath = controlParentPath + "/" + deviceId + "/control";
+    Serial.println("Starting control stream for path: " + controlPath);
+    
+    if (!Firebase.RTDB.beginMultiPathStream(&controlStream, controlPath)) {
+        Serial.printf("Control stream initialization failed: %s\n", controlStream.errorReason().c_str());
+        controlStreamActive = false;
     } else {
-        Firebase.RTDB.setMultiPathStreamCallback(&tokenStream, tokenStreamCallback, tokenStreamTimeoutCallback);
-        Serial.println("Firebase token stream initialized successfully!");
+        Firebase.RTDB.setMultiPathStreamCallback(&controlStream, controlStreamCallback, controlStreamTimeoutCallback);
+        controlStreamActive = true;
+        Serial.println("Firebase control stream initialized successfully!");
     }
 }
 
-void FirebaseManager::tokenStreamCallback(MultiPathStream stream) {
-    if (globalFirebaseManager == nullptr) return;
+void FirebaseManager::handleStreams() {
+    // Handle control stream for real-time updates
+    if (controlStreamActive && !Firebase.RTDB.readStream(&controlStream)) {
+        Serial.printf("Control stream error: %s\n", controlStream.errorReason().c_str());
+        
+        // Attempt to reinitialize if stream fails
+        if (controlStream.httpCode() != FIREBASE_ERROR_HTTP_CODE_OK) {
+            Serial.println("Attempting to reinitialize control stream...");
+            initializeControlStream();
+        }
+    }
     
-    // Check if the stream updated /tokens
-    if (stream.get("/tokens")) {
-        Serial.println("Token Updated Path: " + stream.dataPath);
-        Serial.println("Token New Value: " + stream.value);
+    // Check tokens periodically (non-realtime)
+    checkTokensUpdate();
+}
 
+void FirebaseManager::checkTokensUpdate() {
+    if (millis() - lastTokenCheck >= TOKEN_CHECK_INTERVAL) {
+        Serial.println("Performing periodic token check...");
+        loadTokensFromDatabase();
+        lastTokenCheck = millis();
+    }
+}
+
+void FirebaseManager::loadTokensFromDatabase() {
+    String tokenPath = tokenParentPath + "/tokens";
+    
+    if (Firebase.RTDB.getJSON(&fbdo, tokenPath)) {
+        Serial.println("Loading tokens from database...");
+        
         FirebaseJson json;
         FirebaseJsonData result;
-
-        // Clear any previous JSON content before loading new data
-        json.clear();
-        json.setJsonData(stream.value);
-
+        json.setJsonData(fbdo.jsonString());
+        
+        // Clear current tokens
+        tokenCount = 0;
+        
         // Begin iterating through all children under /tokens
         size_t count = json.iteratorBegin();
-        globalFirebaseManager->tokenCount = 0;  // reset token count before filling
-
+        
         for (size_t i = 0; i < count; i++) {
             FirebaseJson::IteratorValue value = json.valueAt(i);
             String pushID = value.key;
-
+            
             // Skip any key that doesn't contain a nested object
             if (!value.value.startsWith("{")) {
-                Serial.println("Ignored non-object key: " + pushID);
                 continue;
             }
-
+            
             String fullPath = pushID + "/device_token";
-
+            
             if (json.get(result, fullPath)) {
                 String deviceToken = result.stringValue;
-                Serial.println("✅ Extracted device_token from " + pushID + ": " + deviceToken);
-
+                Serial.println("✅ Loaded device_token from " + pushID + ": " + deviceToken);
+                
                 // Add to array if not full
-                if (globalFirebaseManager->tokenCount < MAX_TOKENS) {
-                    globalFirebaseManager->deviceTokens[globalFirebaseManager->tokenCount] = deviceToken;
-                    globalFirebaseManager->tokenCount++;
-                    Serial.println("Added to token array, total tokens: " + String(globalFirebaseManager->tokenCount));
-                } else {
-                    Serial.println("⚠️  Token list full, cannot store more.");
+                if (tokenCount < MAX_TOKENS) {
+                    deviceTokens[tokenCount] = deviceToken;
+                    tokenCount++;
                 }
-            } else {
-                Serial.println("⚠️  Skipping key (no device_token): " + pushID);
             }
         }
-
-        // End iteration
+        
         json.iteratorEnd();
-
-        // Send welcome notification
-        globalFirebaseManager->sendMessageToAll("Smart Fan", "Smart Fan system connected! 🌟");
+        Serial.println("Token loading completed. Total tokens: " + String(tokenCount));
+        
+    } else {
+        Serial.printf("Failed to load tokens: %s\n", fbdo.errorReason().c_str());
     }
 }
 
-void FirebaseManager::tokenStreamTimeoutCallback(bool timeout) {
-    if (timeout) {
-        Serial.println("Token stream timed out, attempting to resume...");
+void FirebaseManager::controlStreamCallback(MultiPathStream stream) {
+    if (globalFirebaseManager == nullptr || globalFirebaseManager->espComm == nullptr) return;
+    
+    Serial.println("🔥 Control Stream Update Received!");
+    Serial.println("Path: " + stream.dataPath);
+    Serial.println("Value: " + stream.value);
+    
+    // Handle mode changes (manual/auto)
+    if (stream.get("/mode")) {
+        String newMode = stream.value;
+        newMode.replace("\"", ""); // Remove quotes from JSON string
+        
+        if (newMode != globalFirebaseManager->lastMode) {
+            Serial.println("🔄 Mode changed from '" + globalFirebaseManager->lastMode + "' to '" + newMode + "'");
+            globalFirebaseManager->lastMode = newMode;
+            
+            // Send mode change to ESP32 immediately
+            if (globalFirebaseManager->espComm) {
+                globalFirebaseManager->espComm->setMode(newMode);
+                Serial.println("📡 Sent mode change to ESP32: " + newMode);
+            }
+        }
     }
-    if (globalFirebaseManager && !globalFirebaseManager->tokenStream.httpConnected()) {
-        Serial.printf("Token Error code: %d, reason: %s\n", 
-                      globalFirebaseManager->tokenStream.httpCode(), 
-                      globalFirebaseManager->tokenStream.errorReason().c_str());
+    
+    // Handle fan speed changes
+    if (stream.get("/fanSpeed")) {
+        int newFanSpeed = stream.value.toInt();
+        
+        if (newFanSpeed != globalFirebaseManager->lastFanSpeed) {
+            Serial.println("🌀 Fan speed changed from " + String(globalFirebaseManager->lastFanSpeed) + " to " + String(newFanSpeed));
+            globalFirebaseManager->lastFanSpeed = newFanSpeed;
+            
+            // Send fan speed change to ESP32 immediately
+            if (globalFirebaseManager->espComm) {
+                globalFirebaseManager->espComm->setFanSpeed(newFanSpeed);
+                Serial.println("📡 Sent fan speed change to ESP32: " + String(newFanSpeed));
+            }
+        }
+    }
+    
+    // Handle target temperature changes
+    if (stream.get("/targetTemperature")) {
+        float targetTemp = stream.value.toFloat();
+        Serial.println("🌡️ Target temperature changed to: " + String(targetTemp, 1) + "°C");
+        
+        // Send target temperature to ESP32 immediately
+        if (globalFirebaseManager->espComm) {
+            globalFirebaseManager->espComm->setTargetTemperature(targetTemp);
+            Serial.println("📡 Sent target temperature to ESP32: " + String(targetTemp, 1) + "°C");
+        }
+    }
+    
+    // Handle manual control enable/disable
+    if (stream.get("/manualControl")) {
+        bool manualControl = (stream.value == "true");
+        String mode = manualControl ? "manual" : "auto";
+        Serial.println("🎛️ Manual control " + String(manualControl ? "enabled" : "disabled"));
+        
+        // Send manual control state to ESP32
+        if (globalFirebaseManager->espComm) {
+            globalFirebaseManager->espComm->setMode(mode);
+            Serial.println("📡 Sent manual control state to ESP32: " + mode);
+        }
+    }
+}
+
+void FirebaseManager::controlStreamTimeoutCallback(bool timeout) {
+    if (timeout) {
+        Serial.println("⏰ Control stream timed out, attempting to resume...");
+    }
+    if (globalFirebaseManager && !globalFirebaseManager->controlStream.httpConnected()) {
+        Serial.printf("❌ Control Stream Error code: %d, reason: %s\n", 
+                      globalFirebaseManager->controlStream.httpCode(), 
+                      globalFirebaseManager->controlStream.errorReason().c_str());
+                      
+        // Mark stream as inactive so it can be reinitialized
+        globalFirebaseManager->controlStreamActive = false;
     }
 }
 
@@ -286,6 +397,10 @@ void FirebaseManager::updateDeviceCurrent(const String& deviceId, float temperat
     json.set("current", current);
     json.set("watt", watt);
     json.set("kwh", kwh);
+    
+    // Update local mode tracking to prevent unnecessary commands
+    lastMode = mode;
+    lastFanSpeed = fanSpeed;
     
     if (Firebase.RTDB.setJSON(&fbdo, path, &json)) {
         Serial.println("Device current state updated in Firebase.");

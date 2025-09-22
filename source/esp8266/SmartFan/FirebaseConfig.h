@@ -8,6 +8,9 @@
 
 #define MAX_TOKENS 10  // Maximum number of device tokens to store
 
+// Forward declaration for communication interface
+class ESPCommunication;
+
 class FirebaseManager {
 public:
     FirebaseManager();
@@ -20,27 +23,47 @@ public:
     void resetWiFiSettings();
     bool isReady();
     
+    // Stream management
+    void initializeStreams();
+    void handleStreams();
+    void setESPCommunication(ESPCommunication* comm);
+    
+    // Manual check for tokens (non-realtime)
+    void checkTokensUpdate();
+    
     // Public Firebase objects for callbacks
     FirebaseData fbdo;
-    FirebaseData tokenStream;
+    FirebaseData controlStream;  // For manual/auto and fan speed
     
 private:
     FirebaseAuth auth;
     FirebaseConfig config;
+    ESPCommunication* espComm;  // Reference to ESP communication
     
     // Device token management
     String deviceTokens[MAX_TOKENS];
     int tokenCount;
+    unsigned long lastTokenCheck;
+    const unsigned long TOKEN_CHECK_INTERVAL = 300000; // Check tokens every 5 minutes
     
     // Stream configuration
     String tokenParentPath;
-    String tokenPaths[1];
+    String controlParentPath;
+    String deviceId;
+    
+    // Stream state tracking
+    bool controlStreamActive;
+    String lastMode;
+    int lastFanSpeed;
     
     // Internal methods
-    void initializeTokenStream();
+    void initializeControlStream();
     void printNetworkDiagnostics();
-    static void tokenStreamCallback(MultiPathStream stream);
-    static void tokenStreamTimeoutCallback(bool timeout);
+    void loadTokensFromDatabase();
+    
+    // Callback functions
+    static void controlStreamCallback(MultiPathStream stream);
+    static void controlStreamTimeoutCallback(bool timeout);
 };
 
 // Global instance for callback access
