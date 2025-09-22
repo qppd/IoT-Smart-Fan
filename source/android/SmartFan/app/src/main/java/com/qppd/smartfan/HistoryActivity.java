@@ -12,6 +12,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.*;
 import java.text.SimpleDateFormat;
@@ -25,6 +26,7 @@ public class HistoryActivity extends AppCompatActivity {
     private ArrayList<LogEntry> logsList = new ArrayList<>();
     private DatabaseReference dbRef;
     private String uid;
+    private MaterialToolbar toolbar;
 
     // Data class to hold log entry information
     public static class LogEntry {
@@ -55,6 +57,15 @@ public class HistoryActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_history);
 
+        // Setup toolbar
+        toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
+            getSupportActionBar().setTitle("Device History");
+        }
+
         recyclerViewLogs = findViewById(R.id.recyclerViewLogs);
         recyclerViewLogs.setLayoutManager(new LinearLayoutManager(this));
         adapter = new LogAdapter();
@@ -63,11 +74,60 @@ public class HistoryActivity extends AppCompatActivity {
         dbRef = FirebaseDatabase.getInstance().getReference();
         uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
-        // Show message that no device is linked (device linking removed)
-        Toast.makeText(HistoryActivity.this, "No device connected - history not available.", Toast.LENGTH_LONG).show();
+        // Load data from the known device
+        loadDeviceLogs();
+    }
+    
+    private void loadDeviceLogs() {
+        String deviceId = "SmartFan_ESP8266_001";
+        DatabaseReference logsRef = dbRef.child("smartfan").child("devices").child(deviceId).child("logs");
         
-        // Hide the RecyclerView since no data is available
-        recyclerViewLogs.setVisibility(View.GONE);
+        logsRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                logsList.clear();
+                
+                if (snapshot.exists()) {
+                    for (DataSnapshot logSnapshot : snapshot.getChildren()) {
+                        LogEntry entry = logSnapshot.getValue(LogEntry.class);
+                        if (entry != null) {
+                            logsList.add(entry);
+                        }
+                    }
+                    
+                    // Sort by timestamp (newest first)
+                    logsList.sort((a, b) -> {
+                        if (a.timestamp == null && b.timestamp == null) return 0;
+                        if (a.timestamp == null) return 1;
+                        if (b.timestamp == null) return -1;
+                        return Long.compare(b.timestamp, a.timestamp);
+                    });
+                    
+                    adapter.notifyDataSetChanged();
+                    recyclerViewLogs.setVisibility(View.VISIBLE);
+                    
+                    if (logsList.isEmpty()) {
+                        Toast.makeText(HistoryActivity.this, "No history data available yet.", Toast.LENGTH_LONG).show();
+                    }
+                } else {
+                    // No logs found
+                    recyclerViewLogs.setVisibility(View.GONE);
+                    Toast.makeText(HistoryActivity.this, "No history data available yet.", Toast.LENGTH_LONG).show();
+                }
+            }
+            
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(HistoryActivity.this, "Failed to load history: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                recyclerViewLogs.setVisibility(View.GONE);
+            }
+        });
+    }
+    
+    @Override
+    public boolean onSupportNavigateUp() {
+        onBackPressed();
+        return true;
     }
 
     // RecyclerView Adapter for logs

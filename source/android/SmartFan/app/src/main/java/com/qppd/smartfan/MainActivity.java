@@ -32,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private DatabaseReference dbRef;
     private String uid;
+    private String currentDeviceId; // Store current device ID for control operations
 
     // UI Components
     private CoordinatorLayout coordinatorLayout;
@@ -187,9 +188,83 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupDeviceDataListener() {
+        if (uid == null) {
+            showSnackbar("User not authenticated", false);
+            return;
+        }
+        
+        // Show loading state
+        showLoadingState();
+        
+        // Use the known device ID directly
+        String deviceId = "SmartFan_ESP8266_001";
+        currentDeviceId = deviceId;
+        
+        // Load device name and setup listener
+        loadDeviceName(deviceId);
+        setupDeviceCurrentDataListener(deviceId);
+    }
+    
+    private void showDeviceSelectionDialog(java.util.List<String> deviceIds) {
+        // Load device names for the dialog
+        String[] deviceNames = new String[deviceIds.size()];
+        java.util.concurrent.atomic.AtomicInteger loadedCount = new java.util.concurrent.atomic.AtomicInteger(0);
+        
+        for (int i = 0; i < deviceIds.size(); i++) {
+            final int index = i;
+            String deviceId = deviceIds.get(i);
+            
+            DatabaseReference deviceRef = dbRef.child("smartfan").child("devices").child(deviceId).child("name");
+            deviceRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    String deviceName = snapshot.getValue(String.class);
+                    if (deviceName != null) {
+                        deviceNames[index] = deviceName;
+                    } else {
+                        deviceNames[index] = "Device " + deviceIds.get(index).substring(0, Math.min(8, deviceIds.get(index).length()));
+                    }
+                    
+                    if (loadedCount.incrementAndGet() == deviceIds.size()) {
+                        // All names loaded, show dialog
+                        showDeviceSelectionDialogWithNames(deviceIds, deviceNames);
+                    }
+                }
+                
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    deviceNames[index] = "Device " + deviceIds.get(index).substring(0, Math.min(8, deviceIds.get(index).length()));
+                    
+                    if (loadedCount.incrementAndGet() == deviceIds.size()) {
+                        // All names loaded, show dialog
+                        showDeviceSelectionDialogWithNames(deviceIds, deviceNames);
+                    }
+                }
+            });
+        }
+    }
+    
+    private void showDeviceSelectionDialogWithNames(java.util.List<String> deviceIds, String[] deviceNames) {
+        new AlertDialog.Builder(this)
+            .setTitle("Select Device")
+            .setItems(deviceNames, (dialog, which) -> {
+                String selectedDeviceId = deviceIds.get(which);
+                currentDeviceId = selectedDeviceId;
+                loadDeviceName(selectedDeviceId);
+                setupDeviceCurrentDataListener(selectedDeviceId);
+            })
+            .setOnCancelListener(dialog -> {
+                // User cancelled, show demo data
+                hideLoadingState();
+                showDemoData();
+            })
+            .show();
+    }
+    
+    private void showDemoData() {
         // Set default/demo values since no device is linked
         updateDeviceStatus(false); // Show device as offline
-        updateTemperatureDisplay(25.0); // Default temperature
+        updateTemperatureDisplay(0.00); // Default temperature
         updateFanDisplay(0); // Fan off
         updateModeDisplay("manual"); // Manual mode
         
@@ -199,6 +274,83 @@ public class MainActivity extends AppCompatActivity {
         updateEnergyDisplay(0.0); // No energy consumption
         
         updateLastSeenTime();
+    }
+    
+    private void setupDeviceCurrentDataListener(String deviceId) {
+        DatabaseReference deviceCurrentRef = dbRef.child("smartfan").child("devices").child(deviceId).child("current");
+        
+        deviceCurrentRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    // Device is online - data exists
+                    hideLoadingState();
+                    updateDeviceStatus(true);
+                    
+                    // Get temperature
+                    Double temperature = snapshot.child("temperature").getValue(Double.class);
+                    if (temperature != null) {
+                        updateTemperatureDisplay(temperature);
+                    }
+                    
+                    // Get humidity (for future use)
+                    Double humidity = snapshot.child("humidity").getValue(Double.class);
+                    
+                    // Get fan speed
+                    Integer fanSpeed = snapshot.child("fanSpeed").getValue(Integer.class);
+                    if (fanSpeed != null) {
+                        updateFanDisplay(fanSpeed);
+                    }
+                    
+                    // Get mode
+                    String mode = snapshot.child("mode").getValue(String.class);
+                    if (mode != null) {
+                        updateModeDisplay(mode);
+                    }
+                    
+                    // Get voltage and current
+                    Double voltage = snapshot.child("voltage").getValue(Double.class);
+                    Double current = snapshot.child("current").getValue(Double.class);
+                    if (voltage != null && current != null) {
+                        updatePowerDisplay(voltage, current);
+                    }
+                    
+                    // Get watt
+                    Double watt = snapshot.child("watt").getValue(Double.class);
+                    if (watt != null) {
+                        updateWattDisplay(watt);
+                    }
+                    
+                    // Get kWh
+                    Double kwh = snapshot.child("kwh").getValue(Double.class);
+                    if (kwh != null) {
+                        updateEnergyDisplay(kwh);
+                    }
+                    
+                    // Update last seen time from Firebase
+                    Long lastUpdate = snapshot.child("lastUpdate").getValue(Long.class);
+                    if (lastUpdate != null) {
+                        updateLastSeenTimeFromTimestamp(lastUpdate);
+                    } else {
+                        updateLastSeenTime(); // Fallback to current time
+                    }
+                    
+                } else {
+                    // Device is offline - no current data
+                    hideLoadingState();
+                    updateDeviceStatus(false);
+                    showDemoData();
+                }
+            }
+            
+            @Override
+            public void onCancelled(DatabaseError error) {
+                hideLoadingState();
+                showSnackbar("Failed to load device data: " + error.getMessage(), false);
+                updateDeviceStatus(false);
+                showDemoData();
+            }
+        });
     }
 
     private void updateDeviceStatus(boolean isOnline) {
@@ -306,6 +458,44 @@ public class MainActivity extends AppCompatActivity {
         String timeStr = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date());
         textViewLastUpdated.setText(timeStr);
     }
+    
+    private void updateLastSeenTimeFromTimestamp(long timestamp) {
+        String timeStr = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date(timestamp * 1000));
+        textViewLastUpdated.setText(timeStr);
+    }
+    
+    private void showLoadingState() {
+        textViewDeviceStatus.setText("Loading...");
+        textViewDeviceStatus.setTextColor(getColor(R.color.status_offline));
+        textViewCurrentTemp.setText("--°C");
+        textViewFanStatus.setText("Loading...");
+    }
+    
+    private void hideLoadingState() {
+        // Loading state will be overridden by actual data or demo data
+    }
+    
+    private void loadDeviceName(String deviceId) {
+        DatabaseReference deviceRef = dbRef.child("smartfan").child("devices").child(deviceId).child("name");
+        deviceRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                String deviceName = snapshot.getValue(String.class);
+                if (deviceName != null && getSupportActionBar() != null) {
+                    getSupportActionBar().setTitle(deviceName);
+                } else if (getSupportActionBar() != null) {
+                    getSupportActionBar().setTitle("Smart Fan - " + deviceId.substring(0, Math.min(8, deviceId.length())));
+                }
+            }
+            
+            @Override
+            public void onCancelled(DatabaseError error) {
+                if (getSupportActionBar() != null) {
+                    getSupportActionBar().setTitle("Smart Fan");
+                }
+            }
+        });
+    }
 
     private void setupControls() {
         // Auto mode switch
@@ -345,13 +535,35 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateDeviceMode(String mode) {
-        // Device mode update removed - no device linked
-        showSnackbar("No device connected to update mode", false);
+        if (currentDeviceId == null) {
+            showSnackbar("No device connected to update mode", false);
+            return;
+        }
+        
+        DatabaseReference deviceCurrentRef = dbRef.child("smartfan").child("devices").child(currentDeviceId).child("current");
+        deviceCurrentRef.child("mode").setValue(mode)
+            .addOnSuccessListener(aVoid -> {
+                showSnackbar("Mode updated to " + mode, true);
+            })
+            .addOnFailureListener(e -> {
+                showSnackbar("Failed to update mode: " + e.getMessage(), false);
+            });
     }
 
     private void updateDeviceFanSpeed(int fanSpeed) {
-        // Fan speed update removed - no device linked 
-        showSnackbar("No device connected to update fan speed", false);
+        if (currentDeviceId == null) {
+            showSnackbar("No device connected to update fan speed", false);
+            return;
+        }
+        
+        DatabaseReference deviceCurrentRef = dbRef.child("smartfan").child("devices").child(currentDeviceId).child("current");
+        deviceCurrentRef.child("fanSpeed").setValue(fanSpeed)
+            .addOnSuccessListener(aVoid -> {
+                showSnackbar("Fan speed updated to " + fanSpeed, true);
+            })
+            .addOnFailureListener(e -> {
+                showSnackbar("Failed to update fan speed: " + e.getMessage(), false);
+            });
     }
 
     private void setupQuickActions() {
