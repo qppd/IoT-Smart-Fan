@@ -162,6 +162,7 @@ public class MainActivity extends AppCompatActivity {
     private void setupDashboard() {
         animateCardsEntry();
         setupDeviceDataListener();
+        setupDeviceControlListener(); // Add control stream listener
         setupControls();
         setupQuickActions();
     }
@@ -497,15 +498,119 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void setupDeviceControlListener() {
+        if (uid == null || currentDeviceId == null) {
+            return;
+        }
+        
+        // Initialize control stream with default values if it doesn't exist
+        initializeControlStream();
+        
+        // Listen to control stream for realtime updates from other sources
+        DatabaseReference deviceControlRef = dbRef.child("smartfan").child("devices").child(currentDeviceId).child("control");
+        
+        deviceControlRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    // Update UI based on control changes (from other sources like ESP8266 or other apps)
+                    
+                    // Get mode
+                    String mode = snapshot.child("mode").getValue(String.class);
+                    if (mode != null) {
+                        boolean isAutoMode = "auto".equals(mode);
+                        if (switchAutoMode.isChecked() != isAutoMode) {
+                            //switchAutoMode.setChecked(isAutoMode);
+                            sliderFanSpeed.setEnabled(!isAutoMode);
+                        }
+                    }
+                    
+                    // Get fan speed
+                    Integer fanSpeed = snapshot.child("fanSpeed").getValue(Integer.class);
+                    if (fanSpeed != null && fanSpeed != (int) sliderFanSpeed.getValue()) {
+                        sliderFanSpeed.setValue(fanSpeed);
+                        textViewFanSpeedLabel.setText("Fan Speed: " + fanSpeed);
+                    }
+                    
+                    // Get target temperature (if you add this control later)
+                    Double targetTemperature = snapshot.child("targetTemperature").getValue(Double.class);
+                    // Handle target temperature if needed in future
+                    
+                    // Get manual control state
+                    Boolean manualControl = snapshot.child("manualControl").getValue(Boolean.class);
+                    if (manualControl != null && manualControl) {
+                        // Manual control is enabled, ensure we're in manual mode
+                        if (switchAutoMode.isChecked()) {
+                            //switchAutoMode.setChecked(false);
+                            sliderFanSpeed.setEnabled(true);
+                        }
+                    }
+                }
+            }
+            
+            @Override
+            public void onCancelled(DatabaseError error) {
+                showSnackbar("Failed to listen for control updates: " + error.getMessage(), false);
+            }
+        });
+    }
+
+    private void initializeControlStream() {
+        if (currentDeviceId == null) return;
+        
+        DatabaseReference deviceControlRef = dbRef.child("smartfan").child("devices").child(currentDeviceId).child("control");
+        
+        // Check if control stream exists, if not initialize with defaults
+        deviceControlRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                if (!snapshot.exists()) {
+                    // Initialize control stream with default values
+                    java.util.Map<String, Object> defaultControl = new java.util.HashMap<>();
+                    defaultControl.put("mode", "auto");
+                    defaultControl.put("fanSpeed", 50);
+                    defaultControl.put("targetTemperature", 25.0);
+                    defaultControl.put("manualControl", false);
+                    
+                    deviceControlRef.setValue(defaultControl)
+                        .addOnSuccessListener(aVoid -> {
+                            showSnackbar("Control stream initialized", true);
+                        })
+                        .addOnFailureListener(e -> {
+                            showSnackbar("Failed to initialize control stream: " + e.getMessage(), false);
+                        });
+                }
+            }
+            
+            @Override
+            public void onCancelled(DatabaseError error) {
+                showSnackbar("Failed to check control stream: " + error.getMessage(), false);
+            }
+        });
+    }
+
     private void setupControls() {
         // Auto mode switch
         switchAutoMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
                 showAutoModeConfirmDialog();
             } else {
+                // Switching to manual mode
                 updateDeviceMode("manual");
                 sliderFanSpeed.setEnabled(true);
-                showSnackbar("Manual mode enabled", true);
+                
+                // Set speed slider to 100 when switching to manual (only if currently 0)
+                int currentSpeed = (int) sliderFanSpeed.getValue();
+                if (currentSpeed == 0) {
+                    sliderFanSpeed.setValue(100);
+                    textViewFanSpeedLabel.setText("Fan Speed: 100");
+                    updateDeviceFanSpeed(100);
+                    showSnackbar("Manual mode enabled - Fan speed set to 100", true);
+                } else {
+                    // Update current speed to control stream
+                    updateDeviceFanSpeed(currentSpeed);
+                    showSnackbar("Manual mode enabled", true);
+                }
             }
         });
 
@@ -534,16 +639,42 @@ public class MainActivity extends AppCompatActivity {
             .show();
     }
 
+    // Add method to update target temperature for control stream
+    private void updateDeviceTargetTemperature(double targetTemperature) {
+        if (currentDeviceId == null) {
+            showSnackbar("No device connected to update target temperature", false);
+            return;
+        }
+        
+        // Write to control path for realtime streaming
+        DatabaseReference deviceControlRef = dbRef.child("smartfan").child("devices").child(currentDeviceId).child("control");
+        deviceControlRef.child("targetTemperature").setValue(targetTemperature)
+            .addOnSuccessListener(aVoid -> {
+                showSnackbar("Target temperature updated to " + targetTemperature + "°C", true);
+            })
+            .addOnFailureListener(e -> {
+                showSnackbar("Failed to update target temperature: " + e.getMessage(), false);
+            });
+    }
+
     private void updateDeviceMode(String mode) {
         if (currentDeviceId == null) {
             showSnackbar("No device connected to update mode", false);
             return;
         }
         
-        DatabaseReference deviceCurrentRef = dbRef.child("smartfan").child("devices").child(currentDeviceId).child("current");
-        deviceCurrentRef.child("mode").setValue(mode)
+        // Write to control path for realtime streaming
+        DatabaseReference deviceControlRef = dbRef.child("smartfan").child("devices").child(currentDeviceId).child("control");
+        deviceControlRef.child("mode").setValue(mode)
             .addOnSuccessListener(aVoid -> {
                 showSnackbar("Mode updated to " + mode, true);
+                
+                // Also set manualControl flag for ESP8266 streaming
+                if ("manual".equals(mode)) {
+                    deviceControlRef.child("manualControl").setValue(true);
+                } else {
+                    deviceControlRef.child("manualControl").setValue(false);
+                }
             })
             .addOnFailureListener(e -> {
                 showSnackbar("Failed to update mode: " + e.getMessage(), false);
@@ -556,8 +687,9 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         
-        DatabaseReference deviceCurrentRef = dbRef.child("smartfan").child("devices").child(currentDeviceId).child("current");
-        deviceCurrentRef.child("fanSpeed").setValue(fanSpeed)
+        // Write to control path for realtime streaming
+        DatabaseReference deviceControlRef = dbRef.child("smartfan").child("devices").child(currentDeviceId).child("control");
+        deviceControlRef.child("fanSpeed").setValue(fanSpeed)
             .addOnSuccessListener(aVoid -> {
                 showSnackbar("Fan speed updated to " + fanSpeed, true);
             })
