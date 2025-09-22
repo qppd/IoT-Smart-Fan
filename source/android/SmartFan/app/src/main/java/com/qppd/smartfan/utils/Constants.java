@@ -2,7 +2,7 @@ package com.qppd.smartfan.utils;
 
 public class Constants {
     // Default SmartFan device ID
-    public static final String DEFAULT_DEVICE_ID = "SmartFan_ESP8266_001";
+    public static final String DEFAULT_DEVICE_ID = "SmartFan_ESP8266_000";
     
     // Device ID validation prefix
     public static final String DEVICE_ID_PREFIX = "SmartFan_ESP";

@@ -847,7 +847,7 @@ public class HistoryActivity extends AppCompatActivity {
                         currentDeviceId = deviceId;
                     } else {
                         // Fall back to default device ID
-                        currentDeviceId = "SmartFan_ESP8266_001";
+                        currentDeviceId = "SmartFan_ESP8266_000";
                     }
                     
                     // Load data with the determined device ID
@@ -858,7 +858,7 @@ public class HistoryActivity extends AppCompatActivity {
                 @Override
                 public void onCancelled(DatabaseError error) {
                     // Fall back to default device ID on error
-                    currentDeviceId = "SmartFan_ESP8266_001";
+                    currentDeviceId = "SmartFan_ESP8266_000";
                     loadDeviceLogs();
                     loadGeneralData();
                 }
@@ -867,7 +867,7 @@ public class HistoryActivity extends AppCompatActivity {
     
     private void loadDeviceLogs() {
         if (currentDeviceId == null) {
-            currentDeviceId = "SmartFan_ESP8266_001"; // Fallback
+            currentDeviceId = "SmartFan_ESP8266_000"; // Fallback
         }
         
         DatabaseReference logsRef = dbRef.child("smartfan").child("devices").child(currentDeviceId).child("logs");

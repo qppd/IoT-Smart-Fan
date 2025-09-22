@@ -115,14 +115,14 @@ public class SettingsActivity extends AppCompatActivity {
                         editTextDeviceId.setText(currentDeviceId);
                     } else {
                         // Set default device ID
-                        editTextDeviceId.setText("SmartFan_ESP8266_001");
+                        editTextDeviceId.setText("SmartFan_ESP8266_000");
                     }
                 }
 
                 @Override
                 public void onCancelled(DatabaseError error) {
                     showSnackbar("Failed to load device ID: " + error.getMessage(), false);
-                    editTextDeviceId.setText("SmartFan_ESP8266_001");
+                    editTextDeviceId.setText("SmartFan_ESP8266_000");
                 }
             });
     }

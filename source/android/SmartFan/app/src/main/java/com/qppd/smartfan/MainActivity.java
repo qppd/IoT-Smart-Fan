@@ -225,7 +225,7 @@ public class MainActivity extends AppCompatActivity {
                     hideLoadingState();
                     showSnackbar("Failed to load device configuration: " + error.getMessage(), false);
                     // Fall back to default device ID
-                    String defaultDeviceId = "SmartFan_ESP8266_001";
+                    String defaultDeviceId = "SmartFan_ESP8266_000";
                     currentDeviceId = defaultDeviceId;
                     loadDeviceName(defaultDeviceId);
                     setupDeviceCurrentDataListener(defaultDeviceId);
@@ -242,7 +242,7 @@ public class MainActivity extends AppCompatActivity {
             })
             .setNegativeButton(getString(R.string.message_use_default), (dialog, which) -> {
                 // Set default device ID and save it
-                String defaultDeviceId = "SmartFan_ESP8266_001";
+                String defaultDeviceId = "SmartFan_ESP8266_000";
                 dbRef.child("smartfan").child("users").child(uid).child("deviceId").setValue(defaultDeviceId);
                 currentDeviceId = defaultDeviceId;
                 loadDeviceName(defaultDeviceId);

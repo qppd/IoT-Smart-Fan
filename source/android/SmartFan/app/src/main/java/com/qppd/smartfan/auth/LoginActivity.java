@@ -96,7 +96,7 @@ public class LoginActivity extends AppCompatActivity {
                                 
                                 if (deviceId == null || deviceId.isEmpty()) {
                                     // No device ID configured, set default and navigate
-                                    dbRef.child("smartfan").child("users").child(uid).child("deviceId").setValue("SmartFan_ESP8266_001");
+                                    dbRef.child("smartfan").child("users").child(uid).child("deviceId").setValue("SmartFan_ESP8266_000");
                                 }
                                 
                                 Toast.makeText(LoginActivity.this, "Welcome back!", Toast.LENGTH_SHORT).show();

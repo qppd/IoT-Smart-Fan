@@ -150,7 +150,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="text"
-                            android:text="SmartFan_ESP8266_001" />
+                            android:text="SmartFan_ESP8266_000" />
 
                     </com.google.android.material.textfield.TextInputLayout>
 
