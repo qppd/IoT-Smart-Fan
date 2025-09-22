@@ -38,6 +38,8 @@ import java.io.OutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Locale;
 import java.util.List;
@@ -116,6 +118,14 @@ public class HistoryActivity extends AppCompatActivity {
         // Initialize charts
         chartTemperature = findViewById(R.id.chartTemperature);
         chartFanSpeed = findViewById(R.id.chartFanSpeed);
+        
+        // Validate chart initialization
+        if (chartTemperature == null) {
+            System.err.println("Warning: chartTemperature is null - check layout file");
+        }
+        if (chartFanSpeed == null) {
+            System.err.println("Warning: chartFanSpeed is null - check layout file");
+        }
         
         // Initialize filter components
         chipGroupFilter = findViewById(R.id.chipGroupFilter);
@@ -270,154 +280,443 @@ public class HistoryActivity extends AppCompatActivity {
     
     private List<LogEntry> getFilteredData() {
         List<LogEntry> filteredList = new ArrayList<>();
-        long currentTime = System.currentTimeMillis();
-        long cutoffTime = currentTime - currentTimeFilter;
         
-        for (LogEntry entry : logsList) {
-            if (entry.timestamp != null) {
-                long entryTime = entry.timestamp * 1000; // Convert to milliseconds
-                if (entryTime >= cutoffTime) {
-                    filteredList.add(entry);
+        try {
+            if (logsList == null || logsList.isEmpty()) {
+                return filteredList;
+            }
+            
+            long currentTime = System.currentTimeMillis();
+            long cutoffTime = currentTime - currentTimeFilter;
+            
+            for (LogEntry entry : logsList) {
+                if (entry != null && (entry.datetime != null || entry.timestamp != null)) {
+                    long entryTime = 0;
+                    
+                    // Prefer datetime string parsing over timestamp
+                    if (entry.datetime != null && !entry.datetime.trim().isEmpty()) {
+                        try {
+                            // Parse datetime string (format: "2025-09-23 03:47:26")
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+                            Date date = sdf.parse(entry.datetime);
+                            if (date != null) {
+                                entryTime = date.getTime();
+                            }
+                        } catch (Exception e) {
+                            // If datetime parsing fails, fall back to timestamp
+                            if (entry.timestamp != null && entry.timestamp > 0) {
+                                entryTime = entry.timestamp * 1000; // Convert to milliseconds
+                            }
+                        }
+                    } else if (entry.timestamp != null && entry.timestamp > 0) {
+                        entryTime = entry.timestamp * 1000; // Convert to milliseconds
+                    }
+                    
+                    if (entryTime > 0) {
+                        // For debugging: Check if timestamp seems to be in the future
+                        if (entryTime > currentTime + (24 * 60 * 60 * 1000)) {
+                            // Include it but log the issue for debugging
+                            System.out.println("Warning: Entry time appears to be in future: " + entry.datetime);
+                            filteredList.add(entry);
+                        } else if (entryTime >= cutoffTime && entryTime <= currentTime) {
+                            filteredList.add(entry);
+                        }
+                    }
                 }
             }
+            
+            // Sort the filtered data by datetime (oldest to newest for proper chart progression)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                filteredList.sort((a, b) -> {
+                    return compareDatetime(a, b);
+                });
+            } else {
+                // For older Android versions, use Collections.sort
+                Collections.sort(filteredList, new Comparator<LogEntry>() {
+                    @Override
+                    public int compare(LogEntry a, LogEntry b) {
+                        return compareDatetime(a, b);
+                    }
+                });
+            }
+        } catch (Exception e) {
+            System.err.println("Error filtering data: " + e.getMessage());
+            e.printStackTrace();
         }
         
         return filteredList;
     }
     
-    private void updateCharts() {
-        List<LogEntry> filteredData = getFilteredData();
-        
-        if (filteredData.isEmpty()) {
-            // Clear charts if no data
-            chartTemperature.clear();
-            chartFanSpeed.clear();
-            chartTemperature.invalidate();
-            chartFanSpeed.invalidate();
-            return;
-        }
-        
-        updateTemperatureChart(filteredData);
-        updateFanSpeedChart(filteredData);
-        updatePowerChart(filteredData);
-    }
-    
-    private void updatePowerChart(List<LogEntry> data) {
-        // We'll use the fan speed chart to also show power data by creating a combined view
-        // or we can add power data as a secondary dataset to the fan speed chart
-        
-        ArrayList<Entry> powerEntries = new ArrayList<>();
-        
-        for (LogEntry entry : data) {
-            if (entry.timestamp != null && entry.watt != null && entry.watt > 0) {
-                float timestamp = entry.timestamp * 1000f; // Convert to milliseconds for X-axis
-                powerEntries.add(new Entry(timestamp, entry.watt.floatValue()));
+    private int compareDatetime(LogEntry a, LogEntry b) {
+        try {
+            // Primary comparison by datetime string
+            if (a.datetime != null && !a.datetime.trim().isEmpty() && 
+                b.datetime != null && !b.datetime.trim().isEmpty()) {
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+                Date dateA = sdf.parse(a.datetime);
+                Date dateB = sdf.parse(b.datetime);
+                if (dateA != null && dateB != null) {
+                    return dateA.compareTo(dateB);
+                }
+            }
+            
+            // Fallback to timestamp comparison
+            if (a.timestamp != null && b.timestamp != null) {
+                return Long.compare(a.timestamp, b.timestamp);
+            }
+            
+            // Handle null cases
+            if (a.datetime == null && a.timestamp == null) return 1;
+            if (b.datetime == null && b.timestamp == null) return -1;
+            
+        } catch (Exception e) {
+            // If parsing fails, fall back to timestamp
+            if (a.timestamp != null && b.timestamp != null) {
+                return Long.compare(a.timestamp, b.timestamp);
             }
         }
         
-        if (powerEntries.isEmpty()) {
-            return; // No power data to add
+        return 0;
+    }
+    
+    private void updateCharts() {
+        try {
+            List<LogEntry> filteredData = getFilteredData();
+            
+            if (filteredData == null || filteredData.isEmpty()) {
+                // Clear charts if no data
+                clearAllCharts();
+                return;
+            }
+            
+            // Validate filtered data before updating charts
+            List<LogEntry> validData = validateChartData(filteredData);
+            
+            if (validData.isEmpty()) {
+                clearAllCharts();
+                return;
+            }
+            
+            updateTemperatureChart(validData);
+            updateFanSpeedChart(validData);
+            updatePowerChart(validData);
+        } catch (Exception e) {
+            // Catch any exceptions to prevent app crash
+            System.err.println("Error updating charts: " + e.getMessage());
+            e.printStackTrace();
+            clearAllCharts();
+        }
+    }
+    
+    private void clearAllCharts() {
+        try {
+            if (chartTemperature != null) {
+                chartTemperature.clear();
+                chartTemperature.invalidate();
+            }
+            if (chartFanSpeed != null) {
+                chartFanSpeed.clear();
+                chartFanSpeed.invalidate();
+            }
+        } catch (Exception e) {
+            System.err.println("Error clearing charts: " + e.getMessage());
+        }
+    }
+    
+    private List<LogEntry> validateChartData(List<LogEntry> data) {
+        List<LogEntry> validData = new ArrayList<>();
+        
+        if (data == null) {
+            return validData;
         }
         
-        // Add power data as a secondary line to the temperature chart
-        LineDataSet powerDataSet = new LineDataSet(powerEntries, "Power (W)");
-        powerDataSet.setColor(Color.parseColor("#4CAF50")); // Green color
-        powerDataSet.setCircleColor(Color.parseColor("#4CAF50"));
-        powerDataSet.setLineWidth(2f);
-        powerDataSet.setCircleRadius(3f);
-        powerDataSet.setDrawCircleHole(false);
-        powerDataSet.setValueTextSize(9f);
-        powerDataSet.setAxisDependency(YAxis.AxisDependency.RIGHT);
+        for (LogEntry entry : data) {
+            if (entry != null && entry.timestamp != null && entry.timestamp > 0) {
+                validData.add(entry);
+            }
+        }
         
-        // Enable right Y-axis for power data
-        YAxis rightAxis = chartTemperature.getAxisRight();
-        rightAxis.setEnabled(true);
-        rightAxis.setAxisMinimum(0f);
-        rightAxis.setDrawGridLines(false);
-        
-        // Get existing data and add power data
-        LineData existingData = chartTemperature.getLineData();
-        if (existingData != null) {
-            existingData.addDataSet(powerDataSet);
-            chartTemperature.setData(existingData);
+        return validData;
+    }
+    
+    private void updatePowerChart(List<LogEntry> data) {
+        try {
+            if (data == null || data.isEmpty()) {
+                return; // No power data to add
+            }
+            
+            // We'll use the fan speed chart to also show power data by creating a combined view
+            // or we can add power data as a secondary dataset to the fan speed chart
+            
+            ArrayList<Entry> powerEntries = new ArrayList<>();
+            
+            for (LogEntry entry : data) {
+                if (entry != null && entry.watt != null && !entry.watt.isNaN() && 
+                    !entry.watt.isInfinite() && entry.watt > 0) {
+                    
+                    float xValue = 0f;
+                    
+                    // Use datetime string for X-axis instead of timestamp
+                    if (entry.datetime != null && !entry.datetime.trim().isEmpty()) {
+                        try {
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+                            Date date = sdf.parse(entry.datetime);
+                            if (date != null) {
+                                xValue = date.getTime(); // Convert to milliseconds for X-axis
+                            }
+                        } catch (Exception e) {
+                            // Fallback to timestamp if datetime parsing fails
+                            if (entry.timestamp != null && entry.timestamp > 0) {
+                                xValue = entry.timestamp * 1000f;
+                            }
+                        }
+                    } else if (entry.timestamp != null && entry.timestamp > 0) {
+                        xValue = entry.timestamp * 1000f; // Convert to milliseconds for X-axis
+                    }
+                    
+                    if (xValue > 0) {
+                        float watt = entry.watt.floatValue();
+                        
+                        // Validate reasonable power values (0-1000W for a fan)
+                        if (watt >= 0 && watt <= 1000) {
+                            powerEntries.add(new Entry(xValue, watt));
+                        }
+                    }
+                }
+            }
+            
+            if (powerEntries.isEmpty()) {
+                return; // No valid power data to add
+            }
+            
+            // Sort power entries by datetime for proper line drawing
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                powerEntries.sort((a, b) -> Float.compare(a.getX(), b.getX()));
+            } else {
+                Collections.sort(powerEntries, new Comparator<Entry>() {
+                    @Override
+                    public int compare(Entry a, Entry b) {
+                        return Float.compare(a.getX(), b.getX());
+                    }
+                });
+            }
+            
+            // Add power data as a secondary line to the temperature chart
+            LineDataSet powerDataSet = new LineDataSet(powerEntries, "Power (W)");
+            powerDataSet.setColor(Color.parseColor("#4CAF50")); // Green color
+            powerDataSet.setCircleColor(Color.parseColor("#4CAF50"));
+            powerDataSet.setLineWidth(2f);
+            powerDataSet.setCircleRadius(3f);
+            powerDataSet.setDrawCircleHole(false);
+            powerDataSet.setValueTextSize(9f);
+            powerDataSet.setAxisDependency(YAxis.AxisDependency.RIGHT);
+            
+            if (chartTemperature != null) {
+                // Enable right Y-axis for power data
+                YAxis rightAxis = chartTemperature.getAxisRight();
+                if (rightAxis != null) {
+                    rightAxis.setEnabled(true);
+                    rightAxis.setAxisMinimum(0f);
+                    rightAxis.setDrawGridLines(false);
+                }
+                
+                // Get existing data and add power data
+                LineData existingData = chartTemperature.getLineData();
+                if (existingData != null) {
+                    existingData.addDataSet(powerDataSet);
+                    chartTemperature.setData(existingData);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error updating power chart: " + e.getMessage());
+            e.printStackTrace();
         }
     }
     
     private void updateTemperatureChart(List<LogEntry> data) {
-        ArrayList<Entry> temperatureEntries = new ArrayList<>();
-        
-        for (LogEntry entry : data) {
-            if (entry.timestamp != null && entry.temperature != null) {
-                float timestamp = entry.timestamp * 1000f; // Convert to milliseconds for X-axis
-                temperatureEntries.add(new Entry(timestamp, entry.temperature.floatValue()));
+        try {
+            if (data == null || data.isEmpty()) {
+                if (chartTemperature != null) {
+                    chartTemperature.clear();
+                    chartTemperature.invalidate();
+                }
+                return;
+            }
+            
+            ArrayList<Entry> temperatureEntries = new ArrayList<>();
+            
+            for (LogEntry entry : data) {
+                if (entry != null && entry.temperature != null && 
+                    !entry.temperature.isNaN() && !entry.temperature.isInfinite()) {
+                    
+                    float xValue = 0f;
+                    
+                    // Use datetime string for X-axis instead of timestamp
+                    if (entry.datetime != null && !entry.datetime.trim().isEmpty()) {
+                        try {
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+                            Date date = sdf.parse(entry.datetime);
+                            if (date != null) {
+                                xValue = date.getTime(); // Convert to milliseconds for X-axis
+                            }
+                        } catch (Exception e) {
+                            // Fallback to timestamp if datetime parsing fails
+                            if (entry.timestamp != null && entry.timestamp > 0) {
+                                xValue = entry.timestamp * 1000f;
+                            }
+                        }
+                    } else if (entry.timestamp != null && entry.timestamp > 0) {
+                        xValue = entry.timestamp * 1000f; // Convert to milliseconds for X-axis
+                    }
+                    
+                    if (xValue > 0) {
+                        float temperature = entry.temperature.floatValue();
+                        
+                        // Additional validation for reasonable temperature values
+                        if (temperature >= -50 && temperature <= 100) {
+                            temperatureEntries.add(new Entry(xValue, temperature));
+                        }
+                    }
+                }
+            }
+            
+            if (temperatureEntries.isEmpty()) {
+                if (chartTemperature != null) {
+                    chartTemperature.clear();
+                    chartTemperature.invalidate();
+                }
+                return;
+            }
+            
+            // Sort entries by X value (datetime) to ensure proper line drawing
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                temperatureEntries.sort((a, b) -> Float.compare(a.getX(), b.getX()));
+            } else {
+                Collections.sort(temperatureEntries, new Comparator<Entry>() {
+                    @Override
+                    public int compare(Entry a, Entry b) {
+                        return Float.compare(a.getX(), b.getX());
+                    }
+                });
+            }
+            
+            LineDataSet dataSet = new LineDataSet(temperatureEntries, "Temperature (°C)");
+            dataSet.setColor(Color.parseColor("#FF5722")); // Orange color
+            dataSet.setCircleColor(Color.parseColor("#FF5722"));
+            dataSet.setLineWidth(2f);
+            dataSet.setCircleRadius(3f);
+            dataSet.setDrawCircleHole(false);
+            dataSet.setValueTextSize(9f);
+            dataSet.setDrawFilled(true);
+            dataSet.setFillColor(Color.parseColor("#FFCCBC")); // Light orange fill
+            
+            ArrayList<ILineDataSet> dataSets = new ArrayList<>();
+            dataSets.add(dataSet);
+            
+            LineData lineData = new LineData(dataSets);
+            if (chartTemperature != null) {
+                chartTemperature.setData(lineData);
+                chartTemperature.invalidate(); // Refresh chart
+            }
+        } catch (Exception e) {
+            System.err.println("Error updating temperature chart: " + e.getMessage());
+            e.printStackTrace();
+            if (chartTemperature != null) {
+                chartTemperature.clear();
+                chartTemperature.invalidate();
             }
         }
-        
-        if (temperatureEntries.isEmpty()) {
-            chartTemperature.clear();
-            chartTemperature.invalidate();
-            return;
-        }
-        
-        LineDataSet dataSet = new LineDataSet(temperatureEntries, "Temperature (°C)");
-        dataSet.setColor(Color.parseColor("#FF5722")); // Orange color
-        dataSet.setCircleColor(Color.parseColor("#FF5722"));
-        dataSet.setLineWidth(2f);
-        dataSet.setCircleRadius(3f);
-        dataSet.setDrawCircleHole(false);
-        dataSet.setValueTextSize(9f);
-        dataSet.setDrawFilled(true);
-        dataSet.setFillColor(Color.parseColor("#FFCCBC")); // Light orange fill
-        
-        ArrayList<ILineDataSet> dataSets = new ArrayList<>();
-        dataSets.add(dataSet);
-        
-        LineData lineData = new LineData(dataSets);
-        chartTemperature.setData(lineData);
-        chartTemperature.invalidate(); // Refresh chart
     }
     
     private void updateFanSpeedChart(List<LogEntry> data) {
-        ArrayList<BarEntry> fanSpeedEntries = new ArrayList<>();
-        ArrayList<String> labels = new ArrayList<>();
-        
-        int index = 0;
-        for (LogEntry entry : data) {
-            if (entry.timestamp != null && entry.fanSpeed != null) {
-                fanSpeedEntries.add(new BarEntry(index, entry.fanSpeed.floatValue()));
+        try {
+            if (data == null || data.isEmpty()) {
+                if (chartFanSpeed != null) {
+                    chartFanSpeed.clear();
+                    chartFanSpeed.invalidate();
+                }
+                return;
+            }
+            
+            ArrayList<BarEntry> fanSpeedEntries = new ArrayList<>();
+            ArrayList<String> labels = new ArrayList<>();
+            
+            int index = 0;
+            for (LogEntry entry : data) {
+                if (entry != null && entry.fanSpeed != null && entry.fanSpeed >= 0) {
+                    
+                    float fanSpeed = entry.fanSpeed.floatValue();
+                    
+                    // Additional validation for reasonable fan speed values (0-100%)
+                    if (fanSpeed >= 0 && fanSpeed <= 100) {
+                        fanSpeedEntries.add(new BarEntry(index, fanSpeed));
+                        
+                        // Create time label using datetime string
+                        String timeLabel = "--:--";
+                        if (entry.datetime != null && !entry.datetime.trim().isEmpty()) {
+                            try {
+                                // Parse datetime string (format: "2025-09-23 03:47:26")
+                                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+                                Date date = sdf.parse(entry.datetime);
+                                if (date != null) {
+                                    timeLabel = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(date);
+                                }
+                            } catch (Exception e) {
+                                // Fallback to timestamp if datetime parsing fails
+                                if (entry.timestamp != null && entry.timestamp > 0) {
+                                    timeLabel = new SimpleDateFormat("HH:mm", Locale.getDefault())
+                                        .format(new Date(entry.timestamp * 1000));
+                                }
+                            }
+                        } else if (entry.timestamp != null && entry.timestamp > 0) {
+                            timeLabel = new SimpleDateFormat("HH:mm", Locale.getDefault())
+                                .format(new Date(entry.timestamp * 1000));
+                        }
+                        
+                        labels.add(timeLabel);
+                        index++;
+                    }
+                }
+            }
+            
+            if (fanSpeedEntries.isEmpty() || labels.isEmpty()) {
+                if (chartFanSpeed != null) {
+                    chartFanSpeed.clear();
+                    chartFanSpeed.invalidate();
+                }
+                return;
+            }
+            
+            BarDataSet dataSet = new BarDataSet(fanSpeedEntries, "Fan Speed (%)");
+            dataSet.setColor(Color.parseColor("#2196F3")); // Blue color
+            dataSet.setValueTextSize(9f);
+            
+            ArrayList<IBarDataSet> dataSets = new ArrayList<>();
+            dataSets.add(dataSet);
+            
+            BarData barData = new BarData(dataSets);
+            barData.setBarWidth(0.9f);
+            
+            if (chartFanSpeed != null) {
+                chartFanSpeed.setData(barData);
                 
-                // Create time label
-                String timeLabel = new SimpleDateFormat("HH:mm", Locale.getDefault())
-                    .format(new Date(entry.timestamp * 1000));
-                labels.add(timeLabel);
-                index++;
+                // Update X-axis labels with validation
+                XAxis xAxis = chartFanSpeed.getXAxis();
+                if (xAxis != null && !labels.isEmpty()) {
+                    xAxis.setValueFormatter(new IndexAxisValueFormatter(labels));
+                    xAxis.setLabelCount(Math.min(labels.size(), 5));
+                }
+                
+                chartFanSpeed.invalidate(); // Refresh chart
+            }
+        } catch (Exception e) {
+            System.err.println("Error updating fan speed chart: " + e.getMessage());
+            e.printStackTrace();
+            if (chartFanSpeed != null) {
+                chartFanSpeed.clear();
+                chartFanSpeed.invalidate();
             }
         }
-        
-        if (fanSpeedEntries.isEmpty()) {
-            chartFanSpeed.clear();
-            chartFanSpeed.invalidate();
-            return;
-        }
-        
-        BarDataSet dataSet = new BarDataSet(fanSpeedEntries, "Fan Speed (%)");
-        dataSet.setColor(Color.parseColor("#2196F3")); // Blue color
-        dataSet.setValueTextSize(9f);
-        
-        ArrayList<IBarDataSet> dataSets = new ArrayList<>();
-        dataSets.add(dataSet);
-        
-        BarData barData = new BarData(dataSets);
-        barData.setBarWidth(0.9f);
-        
-        chartFanSpeed.setData(barData);
-        
-        // Update X-axis labels
-        XAxis xAxis = chartFanSpeed.getXAxis();
-        xAxis.setValueFormatter(new IndexAxisValueFormatter(labels));
-        xAxis.setLabelCount(Math.min(labels.size(), 5));
-        
-        chartFanSpeed.invalidate(); // Refresh chart
     }
     
     private void exportData() {
@@ -518,7 +817,12 @@ public class HistoryActivity extends AppCompatActivity {
                             if (!isDuplicate) {
                                 logsList.add(0, entry); // Add to beginning as it's likely the most recent
                                 adapter.notifyDataSetChanged();
-                                updateCharts(); // Update charts when new data is added
+                                try {
+                                    updateCharts(); // Update charts when new data is added
+                                } catch (Exception e) {
+                                    System.err.println("Error updating charts after new data: " + e.getMessage());
+                                    e.printStackTrace();
+                                }
                             }
                         }
                     } catch (Exception e) {
@@ -581,8 +885,13 @@ public class HistoryActivity extends AppCompatActivity {
                     adapter.notifyDataSetChanged();
                     recyclerViewLogs.setVisibility(View.VISIBLE);
                     
-                    // Update charts with loaded data
-                    updateCharts();
+                    // Update charts with loaded data - add safety check
+                    try {
+                        updateCharts();
+                    } catch (Exception e) {
+                        System.err.println("Error updating charts after data load: " + e.getMessage());
+                        e.printStackTrace();
+                    }
                     
                     if (logsList.isEmpty()) {
                         Toast.makeText(HistoryActivity.this, "No valid history data available yet.", Toast.LENGTH_LONG).show();
