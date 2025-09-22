@@ -86,20 +86,29 @@ public class LoginActivity extends AppCompatActivity {
                     loginButton.setEnabled(true);
                     
                     if (task.isSuccessful()) {
-                        // Check if user has linked devices
+                        // Check if user has configured device ID
                         com.google.firebase.database.DatabaseReference dbRef = com.google.firebase.database.FirebaseDatabase.getInstance().getReference();
                         String uid = mAuth.getCurrentUser().getUid();
-                        dbRef.child("smartfan").child("users").child(uid).child("devices").addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
+                        dbRef.child("smartfan").child("users").child(uid).child("deviceId").addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
                             @Override
                             public void onDataChange(com.google.firebase.database.DataSnapshot snapshot) {
-                                // Navigate directly to main activity (device linking removed)
+                                String deviceId = snapshot.getValue(String.class);
+                                
+                                if (deviceId == null || deviceId.isEmpty()) {
+                                    // No device ID configured, set default and navigate
+                                    dbRef.child("smartfan").child("users").child(uid).child("deviceId").setValue("SmartFan_ESP8266_001");
+                                }
+                                
                                 Toast.makeText(LoginActivity.this, "Welcome back!", Toast.LENGTH_SHORT).show();
                                 startActivity(new Intent(LoginActivity.this, com.qppd.smartfan.MainActivity.class));
                                 finish();
                             }
                             @Override
                             public void onCancelled(com.google.firebase.database.DatabaseError error) {
-                                Toast.makeText(LoginActivity.this, "Error: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                                // On error, still proceed to main activity with default device ID
+                                Toast.makeText(LoginActivity.this, "Welcome back!", Toast.LENGTH_SHORT).show();
+                                startActivity(new Intent(LoginActivity.this, com.qppd.smartfan.MainActivity.class));
+                                finish();
                             }
                         });
                     } else {

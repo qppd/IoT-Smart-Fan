@@ -50,6 +50,7 @@ public class HistoryActivity extends AppCompatActivity {
     private ArrayList<LogEntry> logsList = new ArrayList<>();
     private DatabaseReference dbRef;
     private String uid;
+    private String currentDeviceId; // Add device ID field
     private MaterialToolbar toolbar;
     
     // Chart components
@@ -144,11 +145,8 @@ public class HistoryActivity extends AppCompatActivity {
         // Setup filter listeners
         setupFilterListeners();
 
-        // Load data from the known device
-        loadDeviceLogs();
-        
-        // Also try to load from general data path as fallback
-        loadGeneralData();
+        // Load device ID and then load data
+        loadDeviceIdAndData();
     }
     
     private void setupTemperatureChart() {
@@ -838,9 +836,41 @@ public class HistoryActivity extends AppCompatActivity {
         });
     }
     
+    private void loadDeviceIdAndData() {
+        // Load device ID from user settings
+        dbRef.child("smartfan").child("users").child(uid).child("deviceId")
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    String deviceId = snapshot.getValue(String.class);
+                    if (deviceId != null && !deviceId.isEmpty()) {
+                        currentDeviceId = deviceId;
+                    } else {
+                        // Fall back to default device ID
+                        currentDeviceId = "SmartFan_ESP8266_001";
+                    }
+                    
+                    // Load data with the determined device ID
+                    loadDeviceLogs();
+                    loadGeneralData();
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    // Fall back to default device ID on error
+                    currentDeviceId = "SmartFan_ESP8266_001";
+                    loadDeviceLogs();
+                    loadGeneralData();
+                }
+            });
+    }
+    
     private void loadDeviceLogs() {
-        String deviceId = "SmartFan_ESP8266_001";
-        DatabaseReference logsRef = dbRef.child("smartfan").child("devices").child(deviceId).child("logs");
+        if (currentDeviceId == null) {
+            currentDeviceId = "SmartFan_ESP8266_001"; // Fallback
+        }
+        
+        DatabaseReference logsRef = dbRef.child("smartfan").child("devices").child(currentDeviceId).child("logs");
         
         logsRef.addValueEventListener(new ValueEventListener() {
             @Override

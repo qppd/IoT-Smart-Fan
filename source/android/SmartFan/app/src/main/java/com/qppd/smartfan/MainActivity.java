@@ -197,13 +197,59 @@ public class MainActivity extends AppCompatActivity {
         // Show loading state
         showLoadingState();
         
-        // Use the known device ID directly
-        String deviceId = "SmartFan_ESP8266_001";
-        currentDeviceId = deviceId;
-        
-        // Load device name and setup listener
-        loadDeviceName(deviceId);
-        setupDeviceCurrentDataListener(deviceId);
+        // Load device ID from user settings with device linking check
+        loadUserDeviceIdAndConnect();
+    }
+    
+    private void loadUserDeviceIdAndConnect() {
+        dbRef.child("smartfan").child("users").child(uid).child("deviceId")
+            .addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    String deviceId = snapshot.getValue(String.class);
+                    
+                    if (deviceId == null || deviceId.isEmpty()) {
+                        // No device ID set, redirect to settings
+                        hideLoadingState();
+                        showDeviceLinkingDialog();
+                    } else {
+                        // Device ID found, use it
+                        currentDeviceId = deviceId;
+                        loadDeviceName(deviceId);
+                        setupDeviceCurrentDataListener(deviceId);
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    hideLoadingState();
+                    showSnackbar("Failed to load device configuration: " + error.getMessage(), false);
+                    // Fall back to default device ID
+                    String defaultDeviceId = "SmartFan_ESP8266_001";
+                    currentDeviceId = defaultDeviceId;
+                    loadDeviceName(defaultDeviceId);
+                    setupDeviceCurrentDataListener(defaultDeviceId);
+                }
+            });
+    }
+    
+    private void showDeviceLinkingDialog() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(getString(R.string.message_device_setup_required))
+            .setMessage("Please configure your SmartFan device ID in Settings to start using the app.")
+            .setPositiveButton(getString(R.string.message_go_to_settings), (dialog, which) -> {
+                startActivity(new Intent(MainActivity.this, SettingsActivity.class));
+            })
+            .setNegativeButton(getString(R.string.message_use_default), (dialog, which) -> {
+                // Set default device ID and save it
+                String defaultDeviceId = "SmartFan_ESP8266_001";
+                dbRef.child("smartfan").child("users").child(uid).child("deviceId").setValue(defaultDeviceId);
+                currentDeviceId = defaultDeviceId;
+                loadDeviceName(defaultDeviceId);
+                setupDeviceCurrentDataListener(defaultDeviceId);
+            })
+            .setCancelable(false)
+            .show();
     }
     
     private void showDeviceSelectionDialog(java.util.List<String> deviceIds) {

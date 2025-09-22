@@ -22,9 +22,9 @@
     <string name="settings_title">Settings</string>
     <string name="settings_theme">Appearance</string>
     <string name="settings_dark_mode">Dark Mode</string>
-    <string name="settings_temperature_thresholds">Temperature Thresholds</string>
-    <string name="settings_min_temp">Minimum Temperature (°C)</string>
-    <string name="settings_max_temp">Maximum Temperature (°C)</string>
+    <string name="settings_device_config">Device Configuration</string>
+    <string name="settings_device_id">SmartFan Device ID</string>
+    <string name="settings_device_id_hint">Enter SmartFan Device ID</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_about">About</string>
     
@@ -46,8 +46,17 @@
     
     <!-- Messages -->
     <string name="message_fan_speed_updated">Fan speed updated</string>
-    <string name="message_settings_saved">Settings saved successfully</string>
+    <string name="message_settings_saved">Device settings saved successfully</string>
+    <string name="message_device_id_saved">Device ID saved successfully</string>
+    <string name="message_device_setup_required">Device setup required</string>
+    <string name="message_go_to_settings">Go to Settings</string>
+    <string name="message_use_default">Use Default Device</string>
     <string name="message_temperature_exceeded">Temperature exceeded safe limit!</string>
+    
+    <!-- Errors -->
+    <string name="error_device_id_empty">Device ID cannot be empty</string>
+    <string name="error_device_id_invalid">Device ID must start with SmartFan_ESP</string>
+    <string name="error_device_connection">Failed to connect to device</string>
     
     <!-- Accessibility -->
     <string name="content_desc_temperature_gauge">Temperature gauge showing current temperature</string>
