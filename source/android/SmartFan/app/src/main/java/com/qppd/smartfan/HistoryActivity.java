@@ -66,33 +66,8 @@ public class HistoryActivity extends AppCompatActivity {
         // Show message that no device is linked (device linking removed)
         Toast.makeText(HistoryActivity.this, "No device connected - history not available.", Toast.LENGTH_LONG).show();
         
-        // Show empty state
-        findViewById(R.id.textViewNoData).setVisibility(View.VISIBLE);
+        // Hide the RecyclerView since no data is available
         recyclerViewLogs.setVisibility(View.GONE);
-    }
-
-    private void loadLogs() {
-        dbRef.child("smartfan").child("devices").child(linkedDeviceId).child("logs").limitToLast(50).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                logsList.clear();
-                for (DataSnapshot logSnap : snapshot.getChildren()) {
-                    Long timestamp = logSnap.child("timestamp").getValue(Long.class);
-                    Double temp = logSnap.child("temperature").getValue(Double.class);
-                    Long fanSpeed = logSnap.child("fanSpeed").getValue(Long.class);
-                    Double voltage = logSnap.child("voltage").getValue(Double.class);
-                    Double current = logSnap.child("current").getValue(Double.class);
-                    Double watt = logSnap.child("watt").getValue(Double.class);
-                    Double kwh = logSnap.child("kwh").getValue(Double.class);
-                    
-                    LogEntry entry = new LogEntry(timestamp, temp, fanSpeed, voltage, current, watt, kwh);
-                    logsList.add(entry);
-                }
-                adapter.notifyDataSetChanged();
-            }
-            @Override
-            public void onCancelled(DatabaseError error) {}
-        });
     }
 
     // RecyclerView Adapter for logs
