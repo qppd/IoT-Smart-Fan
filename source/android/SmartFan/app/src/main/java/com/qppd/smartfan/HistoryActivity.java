@@ -91,6 +91,7 @@ public class HistoryActivity extends AppCompatActivity {
                     for (DataSnapshot logSnapshot : snapshot.getChildren()) {
                         LogEntry entry = logSnapshot.getValue(LogEntry.class);
                         if (entry != null) {
+                            Toast.makeText(HistoryActivity.this, entry.timestamp.toString(), Toast.LENGTH_SHORT).show();
                             logsList.add(entry);
                         }
                     }
