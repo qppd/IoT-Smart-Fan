@@ -28,10 +28,10 @@ unsigned long lastDataSend = 0;
 unsigned long lastNotification = 0;
 unsigned long lastESP32Request = 0;
 unsigned long lastConnCheck = 0;
-const unsigned long DATA_SEND_INTERVAL = 10000;  // Send data every 5 seconds
+const unsigned long DATA_SEND_INTERVAL = 60000;  // Send data every 5 seconds
 const unsigned long NOTIFICATION_INTERVAL = 120000; // Send notifications every 2 hours
-const unsigned long ESP32_REQUEST_INTERVAL = 3000;  // Request ESP32 data every 3 seconds
-const unsigned long CONN_CHECK_INTERVAL = 15000;   // Check ESP32 connection every 15 seconds
+const unsigned long ESP32_REQUEST_INTERVAL = 30000;  // Request ESP32 data every 3 seconds
+const unsigned long CONN_CHECK_INTERVAL = 150000;   // Check ESP32 connection every 15 seconds
 
 // LED indicator control functions
 void setLEDState(bool state) {
@@ -91,7 +91,7 @@ void setup() {
     Serial.printf("Initial Heap Fragmentation: %d%%\n", ESP.getHeapFragmentation());
     
     // Initialize pins
-    pinMode(WIFI_RESET_PIN, INPUT_PULLUP);
+    pinMode(WIFI_RESET_PIN, INPUT_PULLUP);  // Disabled - pin D8 stuck LOW
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, LOW);  // Start with LED off
     
@@ -168,7 +168,7 @@ void loop() {
         lastConnCheck = millis();
     }
     
-    // Handle WiFi reset button
+    // Handle WiFi reset button - DISABLED (Pin D8 stuck LOW)
     handleWiFiReset();
     
     // Update LED status indicator
@@ -301,13 +301,27 @@ void sendStatusNotification() {
 }
 
 void handleWiFiReset() {
+    // FUNCTION DISABLED: Pin D8 (WIFI_RESET_PIN) is stuck LOW causing constant resets
+    // Hardware issue detected - pin appears to be shorted to ground
+    // To re-enable: fix hardware issue or change to different pin in PinConfig.h
+   
+    
     static unsigned long resetStartTime = 0;
     static bool resetIndicatorShown = false;
+    static unsigned long lastDebugPrint = 0;
+    
+    // Debug: Print pin state every 5 seconds
+    if (millis() - lastDebugPrint > 5000) {
+        int pinState = digitalRead(WIFI_RESET_PIN);
+        Serial.printf("DEBUG: WIFI_RESET_PIN (D8) state: %s\n", pinState == LOW ? "LOW" : "HIGH");
+        lastDebugPrint = millis();
+    }
     
     if (digitalRead(WIFI_RESET_PIN) == LOW) {
         if (resetStartTime == 0) {
             resetStartTime = millis();
             resetIndicatorShown = false;
+            Serial.println("DEBUG: WiFi reset pin detected LOW - starting timer");
         }
         
         // Show visual feedback during reset process
@@ -315,11 +329,13 @@ void handleWiFiReset() {
             // Rapid blink to indicate reset button detected
             blinkLED(10, 50);
             resetIndicatorShown = true;
+            Serial.println("DEBUG: Reset button held for 1 second");
         }
         
         // If button held for 3 seconds, reset WiFi
         if (millis() - resetStartTime > 3000) {
             Serial.println("WiFi Reset requested!");
+            Serial.println("DEBUG: Pin has been LOW for 3+ seconds - triggering reset");
             
             // Show reset confirmation with long blinks
             for (int i = 0; i < 3; i++) {
@@ -334,6 +350,9 @@ void handleWiFiReset() {
         }
     } else {
         // Button released
+        if (resetStartTime != 0) {
+            Serial.println("DEBUG: WiFi reset pin released");
+        }
         resetStartTime = 0;
         resetIndicatorShown = false;
     }
