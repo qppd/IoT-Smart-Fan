@@ -29,6 +29,13 @@ import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import com.github.mikephil.charting.interfaces.datasets.IBarDataSet;
 import android.graphics.Color;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Environment;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import java.io.OutputStream;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -55,6 +62,10 @@ public class HistoryActivity extends AppCompatActivity {
     private static final long FILTER_30DAYS = 30 * 24 * 60 * 60 * 1000L;
     
     private long currentTimeFilter = FILTER_24H; // Default to 24 hours
+    
+    // Export functionality
+    private ActivityResultLauncher<Intent> createFileLauncher;
+    private String pendingCsvData;
 
     // Data class to hold log entry information - Updated to match ESP8266 Firebase structure
     public static class LogEntry {
@@ -112,6 +123,9 @@ public class HistoryActivity extends AppCompatActivity {
 
         dbRef = FirebaseDatabase.getInstance().getReference();
         uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+        // Setup file export launcher
+        setupExportLauncher();
 
         // Setup charts
         setupTemperatureChart();
@@ -224,6 +238,34 @@ public class HistoryActivity extends AppCompatActivity {
         });
         
         buttonExport.setOnClickListener(v -> exportData());
+    }
+    
+    private void setupExportLauncher() {
+        createFileLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    Uri uri = result.getData().getData();
+                    if (uri != null && pendingCsvData != null) {
+                        saveToFile(uri, pendingCsvData);
+                    }
+                }
+            }
+        );
+    }
+    
+    private void saveToFile(Uri uri, String csvData) {
+        try {
+            OutputStream outputStream = getContentResolver().openOutputStream(uri);
+            if (outputStream != null) {
+                outputStream.write(csvData.getBytes());
+                outputStream.close();
+                Toast.makeText(this, "Data exported successfully!", Toast.LENGTH_LONG).show();
+            }
+        } catch (IOException e) {
+            Toast.makeText(this, "Error saving file: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+        }
     }
     
     private List<LogEntry> getFilteredData() {
@@ -392,7 +434,7 @@ public class HistoryActivity extends AppCompatActivity {
         for (LogEntry entry : filteredData) {
             csvData.append(entry.timestamp != null ? entry.timestamp : "")
                    .append(",")
-                   .append(entry.datetime != null ? entry.datetime : "")
+                   .append(entry.datetime != null ? "\"" + entry.datetime + "\"" : "")
                    .append(",")
                    .append(entry.temperature != null ? entry.temperature : "")
                    .append(",")
@@ -408,11 +450,46 @@ public class HistoryActivity extends AppCompatActivity {
                    .append("\n");
         }
         
-        // For now, just show the CSV data in a toast (in a real app, save to file)
-        Toast.makeText(this, "CSV data generated (" + filteredData.size() + " entries)", Toast.LENGTH_LONG).show();
+        // Store CSV data for file saving
+        pendingCsvData = csvData.toString();
         
-        // TODO: Implement actual file saving using Storage Access Framework
-        System.out.println("CSV Export:\n" + csvData.toString());
+        // Create file picker intent
+        String timeFilterText = "";
+        if (currentTimeFilter == FILTER_24H) {
+            timeFilterText = "24h";
+        } else if (currentTimeFilter == FILTER_7DAYS) {
+            timeFilterText = "7days";
+        } else if (currentTimeFilter == FILTER_30DAYS) {
+            timeFilterText = "30days";
+        }
+        
+        String fileName = "smartfan_data_" + timeFilterText + "_" + 
+                          new SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(new Date()) + ".csv";
+        
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("text/csv");
+        intent.putExtra(Intent.EXTRA_TITLE, fileName);
+        
+        try {
+            createFileLauncher.launch(intent);
+        } catch (Exception e) {
+            // Fallback: Share the data instead
+            shareData(csvData.toString(), fileName);
+        }
+    }
+    
+    private void shareData(String csvData, String fileName) {
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Smart Fan Data Export");
+        shareIntent.putExtra(Intent.EXTRA_TEXT, "Smart Fan data export (" + getFilteredData().size() + " entries):\n\n" + csvData);
+        
+        try {
+            startActivity(Intent.createChooser(shareIntent, "Share Smart Fan Data"));
+        } catch (Exception e) {
+            Toast.makeText(this, "Unable to share data: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
     
     private void loadGeneralData() {
