@@ -68,6 +68,14 @@
 - **TRIAC Fan Control**: Precision phase angle control (RobotDyn library), 0–100% sweep validated, zero-cross detection stable.
 - **Buzzer Alerts**: Over-temperature and remote-triggered alerts working as intended.
 
+### 🌐 Firebase Real-time Streaming Implementation
+- ✨ **Real-time Control Stream**: ESP8266 monitors `/smartfan/devices/{deviceId}/control` for instant mode, fan speed, and temperature changes
+- 📡 **Sub-3-second Response**: Firebase updates reach ESP32 hardware within 3 seconds end-to-end
+- 🔄 **Mode Control**: Seamless switching between auto/manual modes with immediate ESP32 response
+- 🎛️ **Manual Override**: Real-time fan speed control bypasses temperature logic when in manual mode
+- 🌡️ **Target Temperature**: Dynamic temperature setpoint updates for automatic control mode
+- 💾 **Token Management**: Non-realtime device token loading every 5 minutes to optimize memory usage
+
 ### 🔧 TRIACModule PWM Integration
 - ✨ **New Hardware Control**: `TRIACModule` for precision phase angle control (universal motor fans)
 - 🧩 **Modular C++**: Clean, testable, and maintainable design
@@ -83,6 +91,13 @@
 - 📊 **Comprehensive Monitoring**: Real-time voltage, current, power (W), and energy (kWh)
 - 🚨 **Safety Alerts**: Notifications for high power, overcurrent, and abnormal voltage
 - 📈 **Analytics**: kWh tracking, historical logs, and color-coded UI
+
+### 📱 Android App Enhancements
+- 📊 **Interactive Charts**: Temperature, fan speed, and power consumption visualization with MPAndroidChart
+- ⏰ **Time Filtering**: 24-hour, 7-day, and 30-day data views with real-time chart updates
+- 💾 **CSV Export**: Complete data export functionality with file picker integration and sharing options
+- 🔄 **Firebase Integration**: Proper ESP8266 data structure compatibility with timestamp and datetime handling
+- 🎨 **Material Design 3**: Enhanced UI with animated gauges, status chips, and responsive layouts
 
 ---
 
@@ -135,12 +150,12 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 ```
 <TEMP:25.5>     // Temperature (°C)
 <HUMID:65.0>    // Humidity (%)  
-<VOLT:220.0>    // Voltage (V)
-<CURR:0.8>      // Current (A)
+<VOLT:220.0>    // Voltage (V) - Fixed value, voltage sensor removed
+<CURR:0.8>      // Current (A) - ACS712 with voltage divider (factor 2.43)
 <FAN:75>        // Fan speed (0-100%)
-<BUZZ:ON>       // Buzzer status (now fully implemented)
+<BUZZ:ON>       // Buzzer status (fully implemented and tested)
 <STATUS:RUNNING> // System status
-<ALL:25.5,65.0,220.0,0.8,75> // Combined data
+<ALL:25.5,65.0,220.0,0.8,75> // Combined data package
 ```
 
 
@@ -148,11 +163,13 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 ```
 <CMD:GET_SENSORS>     // Request sensor readings
 <CMD:GET_STATUS>      // Health check
-<SET_FAN:50>          // Set fan speed
-<SET_TEMP:28.0>       // Set target temperature
-<FIREBASE:CONNECTED>  // Firebase status
-<WIFI:CONNECTED>      // WiFi status
-<BUZZ:ALERT>          // Trigger buzzer (now fully implemented)
+<SET_FAN:50>          // Set fan speed (manual mode)
+<SET_TEMP:28.0>       // Set target temperature (auto mode)
+<SET_MODE:manual>     // NEW: Switch to manual control mode
+<SET_MODE:auto>       // NEW: Switch to automatic temperature control
+<FIREBASE:CONNECTED>  // Firebase status update
+<WIFI:CONNECTED>      // WiFi status update
+<BUZZ:ALERT>          // Trigger buzzer alert (fully implemented)
 ```
 
 
@@ -161,14 +178,20 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 
 **Normal Operation Cycle:**
 1. **ESP32**: Reads sensors every 2s, sends data every 5s (**DHT, TRIAC, buzzer all validated**)
-2. **ESP8266**: Syncs to Firebase every 5s, sends notifications every 30s, requests data every 3s
+2. **ESP8266**: Syncs to Firebase every 5s, handles real-time control streams, sends notifications every 30s, requests data every 3s
 
 
 **Remote Command Flow:**
-1. **App/Firebase** → **ESP8266**: Receives commands
-2. **ESP8266** → **ESP32**: Forwards hardware commands (serial comms fully working)
+1. **App/Firebase** → **ESP8266**: Real-time streaming receives commands (mode, fanSpeed, targetTemperature)
+2. **ESP8266** → **ESP32**: Forwards hardware commands via serial (serial comms fully working)
 3. **ESP32**: Executes, confirms, and reports (DHT, TRIAC, buzzer all working)
-4. **ESP8266**: Logs to Firebase
+4. **ESP8266**: Logs current state to Firebase for app synchronization
+
+**Real-time Control Performance:**
+- **Firebase → ESP8266**: 1-2 seconds (Firebase streaming)
+- **ESP8266 → ESP32**: <500ms (Serial communication)
+- **ESP32 → Hardware**: <100ms (TRIAC/sensor response)
+- **Total Latency**: <3 seconds end-to-end
 
 
 ### 🛡️ Safety & Error Handling
@@ -298,11 +321,13 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 <details>
 <summary><b>📊 Real-time Dashboard</b></summary>
 
-- **🌡️ Animated Temperature Gauge**: Beautiful SpeedView visualization
-- **⚡ Power Monitoring Cards**: Live voltage, current, wattage, and energy display
-- **🎛️ Fan Control Interface**: Manual speed control and auto/manual mode toggle
-- **📈 Status Indicators**: Color-coded power consumption status chips
+- **🌡️ Animated Temperature Gauge**: Beautiful SpeedView visualization with real-time updates
+- **⚡ Power Monitoring Cards**: Live voltage, current, wattage, and energy display with color-coded status
+- **🎛️ Fan Control Interface**: Manual speed control slider and auto/manual mode toggle with immediate Firebase sync
+- **📈 Status Indicators**: Color-coded power consumption status chips (Low/Normal/High/Critical)
 - **🔔 Live Alerts**: Real-time notifications for temperature and power thresholds
+- **📊 Interactive Charts**: Historical data visualization with MPAndroidChart library
+- **⏰ Time Filtering**: Toggle between 24h, 7d, 30d views with smooth chart transitions
 
 
 </details>
@@ -324,11 +349,13 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 <details>
 <summary><b>📈 Analytics & History</b></summary>
 
-- **📊 Historical Data**: View temperature, fan speed, and power consumption logs
-- **⏰ Timestamp Tracking**: Detailed historical data with proper time formatting
-- **💾 Data Export**: Access to last 50 log entries with filtering capabilities
-- **📱 Enhanced Log View**: Custom RecyclerView with structured data display
-- **🎯 Conditional Display**: Backward compatibility with older data formats
+- **📊 Historical Data**: Interactive charts for temperature, fan speed, and power consumption trends
+- **⏰ Time-based Filtering**: 24-hour, 7-day, and 30-day data views with chip-based selection
+- **💾 CSV Export**: Complete data export with file picker integration and sharing capabilities
+- **� Chart Features**: MPAndroidChart with zoom, pan, and grid lines for detailed analysis
+- **📱 Enhanced Data Display**: Structured historical view with ESP8266 timestamp compatibility
+- **📈 Real-time Updates**: Charts refresh automatically when time filter changes
+- **🎯 Data Validation**: Robust parsing with error handling for malformed entries
 
 
 </details>
@@ -358,6 +385,9 @@ The SmartFan system utilizes a specialized dual-ESP architecture where two micro
 - **🔔 Cloud Messaging**: Push notifications for alerts and status updates
 - **🛡️ Security Rules**: Role-based access control and data protection
 - **📈 Analytics**: Usage tracking and performance monitoring
+- **🌊 Real-time Streaming**: ESP8266 Firebase streams for instant control response
+- **🎛️ Control Commands**: Real-time mode, fan speed, and temperature updates
+- **📡 Device Logging**: Structured data storage with timestamp and datetime fields
 
 
 </details>
@@ -778,6 +808,161 @@ Install these libraries in Arduino IDE:
 
 ---
 
+## 🧪 Testing & Validation
+
+### 🔬 Firebase Real-time Streaming Tests
+
+<details>
+<summary><b>📡 ESP8266 Control Stream Testing</b></summary>
+
+**Test Real-time Mode Changes:**
+1. Update Firebase database:
+   ```json
+   // Path: /smartfan/devices/SmartFan_ESP8266_001/control/mode
+   "manual"
+   ```
+
+2. Expected ESP8266 serial output:
+   ```
+   🔥 Control Stream Update Received!
+   Path: /mode
+   Value: "manual"
+   🔄 Mode changed from 'auto' to 'manual'
+   📡 Sent mode change to ESP32: manual
+   ```
+
+3. Expected ESP32 to receive: `<SET_MODE:manual>`
+
+**Test Real-time Fan Speed Changes:**
+1. Update Firebase database:
+   ```json
+   // Path: /smartfan/devices/SmartFan_ESP8266_001/control/fanSpeed
+   75
+   ```
+
+2. Expected ESP8266 output:
+   ```
+   🔥 Control Stream Update Received!
+   Path: /fanSpeed
+   Value: 75
+   🌀 Fan speed changed from 50 to 75
+   📡 Sent fan speed change to ESP32: 75
+   ```
+
+3. Expected ESP32 to receive: `<SET_FAN:75>`
+
+**Performance Validation:**
+- **Firebase → ESP8266**: < 2 seconds
+- **ESP8266 → ESP32**: < 500ms
+- **Total latency**: < 3 seconds end-to-end
+
+</details>
+
+<details>
+<summary><b>🧠 ESP32 Hardware Controller Testing</b></summary>
+
+**Serial Command Testing:**
+```cpp
+// Test temperature control logic
+TEST TEMP
+TEST TRIAC
+TEST ALL
+
+// Manual temperature setting
+TEMP 32.0
+
+// Status check
+STATUS
+```
+
+**Expected ESP32 Temperature Control:**
+- **≥32°C**: 99% fan speed
+- **30-31°C**: 90% fan speed  
+- **28-29°C**: 80% fan speed
+- **26-27°C**: 60% fan speed
+- **24-25°C**: 40% fan speed
+- **<24°C**: 20% fan speed
+
+**TRIAC Module Testing:**
+```cpp
+// RobotDyn TRIAC control validation
+testTRIACDimmer();
+
+// Tests power levels: 0%, 25%, 50%, 75%, 100%
+// Verifies GPIO18 (PWM) and GPIO5 (zero-cross) functionality
+```
+
+**Current Sensor Calibration:**
+- **Voltage Divider Factor**: 2.43 (compensates for signal attenuation)
+- **ACS712 Sensitivity**: 0.185 V/A
+- **Calibration**: Multimeter validation (0.074A reading vs 0.18A actual)
+
+</details>
+
+<details>
+<summary><b>🤖 ESP8266 Communication Testing</b></summary>
+
+**Communication Health Check:**
+```cpp
+// ESP8266 → ESP32 ping/pong testing
+testESP8266Communication();
+
+// Expected output:
+Testing ESP8266 <-> ESP32 communication...
+Sent to ESP32: <TEST:ESP8266_PING>
+Received from ESP32: <TEST:ESP32_PONG>
+Communication test PASSED!
+```
+
+**Memory Monitoring:**
+```cpp
+// ESP8266 memory diagnostics
+Initial Free Heap: ~45000 bytes
+After WiFi: ~35000 bytes  
+After Firebase: ~28000 bytes
+Warning threshold: <8000 bytes
+```
+
+**Stream Recovery Testing:**
+1. Disconnect internet temporarily
+2. Expected recovery logs:
+   ```
+   ❌ Control Stream Error: connection timeout
+   ⏰ Control stream timed out, attempting to resume...
+   ```
+3. Reconnect internet - automatic stream reinitialization
+
+</details>
+
+### 📱 Android App Testing
+
+<details>
+<summary><b>📊 Chart & Export Functionality</b></summary>
+
+**Interactive Charts Testing:**
+- **Temperature Chart**: Line chart with orange fill, zoom/pan enabled
+- **Fan Speed Chart**: Bar chart with blue bars, 0-100% range
+- **Power Chart**: Green line on right Y-axis, overlaid with temperature
+- **Time Filtering**: Test 24h, 7d, 30d chip selection
+
+**CSV Export Testing:**
+1. Tap export button → File picker opens
+2. Select save location → CSV file created
+3. Verify format:
+   ```csv
+   Timestamp,DateTime,Temperature(°C),Fan Speed(%),Voltage(V),Current(A),Power(W),Energy(kWh)
+   1727087543,"2024-09-23 15:45:43",28.5,75,220.1,0.156,34.34,0.045
+   ```
+
+**Data Compatibility:**
+- **ESP8266 Structure**: Supports timestamp + datetime fields
+- **Time Display**: Uses datetime field first, falls back to timestamp
+- **Timezone**: GMT+8 as configured in ESP8266
+
+</details>
+
+---
+
 ## � Troubleshooting & Monitoring
 
 
@@ -836,6 +1021,14 @@ Install these libraries in Arduino IDE:
 2. **Firebase Credentials**: Check `firebase_credentials.h` configuration
 3. **Authentication**: Verify Firebase security rules and project settings
 4. **Database Structure**: Ensure proper Firebase database schema
+5. **Real-time Streams**: Check if control stream is active and receiving updates
+6. **Memory Issues**: Monitor ESP8266 heap - warning below 8KB free memory
+
+**Firebase Streaming Issues:**
+1. **Stream Initialization Failed**: Check Firebase database rules for read access to `/smartfan/devices/{deviceId}/control`
+2. **Stream Timeout**: ESP8266 automatically attempts reconnection - monitor serial output for recovery messages
+3. **Command Not Reaching ESP32**: Verify ESP8266 → ESP32 serial communication with ping/pong test
+4. **Mode Changes Not Applied**: Check that ESP32 properly processes `<SET_MODE:auto/manual>` commands
 
 **NTP Time Sync Issues (ESP8266):**
 1. **Problem**: NTP shows success but time is 1970
@@ -902,11 +1095,27 @@ Install these libraries in Arduino IDE:
    // Monitor serial output for power readings
    ```
 
+5. **ESP32 Serial Commands for Testing**:
+   ```cpp
+   // Send via Serial Monitor to ESP32
+   TEST TRIAC    // Test TRIAC control logic
+   TEST TEMP     // Test temperature control logic  
+   TEST ALL      // Run comprehensive tests
+   TEMP 32.0     // Set test temperature
+   STATUS        // Show current system status
+   ```
+
 **Common RobotDyn Issues**:
 - **No dimming response**: Check zero-cross pin connection (GPIO5)
 - **Erratic behavior**: Verify AC phase detection wiring
 - **Library errors**: Ensure RBDdimmer library compatibility
 - **Power level mismatch**: Library may adjust values internally
+- **TRIAC not responding to commands**: Verify ESP32 receives `<SET_FAN:XX>` commands from ESP8266
+
+**Comprehensive Testing Results Expected**:
+- **Temperature Control**: 99% at ≥32°C, 90% at 30-31°C, 80% at 28-29°C, etc.
+- **TRIAC Response**: Actual power matches target speed within ±5%
+- **Mode Switching**: Auto/manual transitions work without fan interruption
 
 **Safety Considerations**:
 - Always use proper AC isolation when working with mains voltage
