@@ -24,7 +24,7 @@ public class HistoryActivity extends AppCompatActivity {
     private LogAdapter adapter;
     private ArrayList<LogEntry> logsList = new ArrayList<>();
     private DatabaseReference dbRef;
-    private String uid, linkedDeviceId;
+    private String uid;
 
     // Data class to hold log entry information
     public static class LogEntry {
@@ -63,28 +63,16 @@ public class HistoryActivity extends AppCompatActivity {
         dbRef = FirebaseDatabase.getInstance().getReference();
         uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
-        // Get linked device
-        dbRef.child("users").child(uid).child("devices").addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    for (DataSnapshot deviceSnap : snapshot.getChildren()) {
-                        linkedDeviceId = deviceSnap.getKey();
-                        break;
-                    }
-                    loadLogs();
-                } else {
-                    Toast.makeText(HistoryActivity.this, "No device linked.", Toast.LENGTH_SHORT).show();
-                    finish();
-                }
-            }
-            @Override
-            public void onCancelled(DatabaseError error) {}
-        });
+        // Show message that no device is linked (device linking removed)
+        Toast.makeText(HistoryActivity.this, "No device connected - history not available.", Toast.LENGTH_LONG).show();
+        
+        // Show empty state
+        findViewById(R.id.textViewNoData).setVisibility(View.VISIBLE);
+        recyclerViewLogs.setVisibility(View.GONE);
     }
 
     private void loadLogs() {
-        dbRef.child("devices").child(linkedDeviceId).child("logs").limitToLast(50).addListenerForSingleValueEvent(new ValueEventListener() {
+        dbRef.child("smartfan").child("devices").child(linkedDeviceId).child("logs").limitToLast(50).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 logsList.clear();

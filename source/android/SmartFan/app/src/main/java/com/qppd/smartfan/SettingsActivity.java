@@ -24,7 +24,7 @@ public class SettingsActivity extends AppCompatActivity {
     private SwitchMaterial switchTheme, switchNotifications;
     private Slider sliderMinTemp, sliderMaxTemp;
     private TextView textViewMinTemp, textViewMaxTemp;
-    private MaterialButton buttonSave, buttonManageDevices;
+    private MaterialButton buttonSave;
     private DatabaseReference dbRef;
     private String uid;
 
@@ -49,7 +49,6 @@ public class SettingsActivity extends AppCompatActivity {
         textViewMinTemp = findViewById(R.id.textViewMinTemp);
         textViewMaxTemp = findViewById(R.id.textViewMaxTemp);
         buttonSave = findViewById(R.id.buttonSaveSettings);
-        buttonManageDevices = findViewById(R.id.buttonManageDevices);
     }
 
     private void setupToolbar() {
@@ -93,11 +92,6 @@ public class SettingsActivity extends AppCompatActivity {
         // Save button
         buttonSave.setOnClickListener(v -> saveSettings());
 
-        // Manage devices button
-        buttonManageDevices.setOnClickListener(v -> {
-            startActivity(new Intent(SettingsActivity.this, com.qppd.smartfan.device.DeviceManagementActivity.class));
-        });
-
         // Notifications switch
         switchNotifications.setOnCheckedChangeListener((buttonView, isChecked) -> {
             // Handle notification preferences
@@ -122,7 +116,7 @@ public class SettingsActivity extends AppCompatActivity {
         FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
                 String token = task.getResult();
-                dbRef.child("users").child(uid).child("fcmToken").setValue(token);
+                dbRef.child("smartfan").child("users").child(uid).child("fcmToken").setValue(token);
             }
         });
     }
@@ -142,8 +136,8 @@ public class SettingsActivity extends AppCompatActivity {
         }
 
         // Save to Firebase
-        dbRef.child("users").child(uid).child("settings").child("tempMin").setValue(minTemp);
-        dbRef.child("users").child(uid).child("settings").child("tempMax").setValue(maxTemp);
+        dbRef.child("smartfan").child("users").child(uid).child("settings").child("tempMin").setValue(minTemp);
+        dbRef.child("smartfan").child("users").child(uid).child("settings").child("tempMax").setValue(maxTemp);
         
         showSnackbar(getString(R.string.message_settings_saved), true);
     }

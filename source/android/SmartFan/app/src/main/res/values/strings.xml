@@ -25,7 +25,6 @@
     <string name="settings_temperature_thresholds">Temperature Thresholds</string>
     <string name="settings_min_temp">Minimum Temperature (°C)</string>
     <string name="settings_max_temp">Maximum Temperature (°C)</string>
-    <string name="settings_device_management">Device Management</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_about">About</string>
     
@@ -37,27 +36,17 @@
     <string name="history_last_30_days">Last 30 Days</string>
     <string name="history_export">Export Data</string>
     
-    <!-- Device Management -->
-    <string name="device_management_title">Your Devices</string>
-    <string name="device_rename">Rename Device</string>
-    <string name="device_unlink">Unlink Device</string>
-    <string name="device_new_name">New Device Name</string>
-    
     <!-- Dialogs -->
     <string name="dialog_confirm">Confirm</string>
     <string name="dialog_cancel">Cancel</string>
     <string name="dialog_yes">Yes</string>
     <string name="dialog_no">No</string>
     <string name="dialog_enable_auto_mode">Enable automatic fan control?</string>
-    <string name="dialog_unlink_device">Are you sure you want to unlink this device?</string>
     <string name="dialog_logout">Are you sure you want to logout?</string>
     
     <!-- Messages -->
-    <string name="message_device_updated">Device settings updated</string>
     <string name="message_fan_speed_updated">Fan speed updated</string>
     <string name="message_settings_saved">Settings saved successfully</string>
-    <string name="message_device_renamed">Device renamed successfully</string>
-    <string name="message_device_unlinked">Device unlinked successfully</string>
     <string name="message_temperature_exceeded">Temperature exceeded safe limit!</string>
     
     <!-- Accessibility -->

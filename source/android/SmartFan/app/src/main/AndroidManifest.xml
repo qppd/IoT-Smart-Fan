@@ -3,14 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.qppd.smartfan">
 
-    <!-- WiFi and Network permissions -->
+    <!-- Basic permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:allowBackup="true"
@@ -53,16 +47,7 @@
             android:name=".HistoryActivity"
             android:exported="false" />
         
-        <!-- Device Activities -->
-        <activity 
-            android:name="com.qppd.smartfan.device.SetupDeviceActivity"
-            android:exported="false" />
-        <activity 
-            android:name="com.qppd.smartfan.device.DeviceManagementActivity"
-            android:exported="false" />
-        <activity 
-            android:name="com.qppd.smartfan.device.WiFiSetupActivity"
-            android:exported="false" />
+
 
         <!-- Firebase Cloud Messaging Service -->
         <service

@@ -199,41 +199,6 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Device Management Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp"
-                app:cardBackgroundColor="?attr/colorSurface">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/settings_device_management"
-                        android:textAppearance="@style/SmartFan.Text.Headline"
-                        android:textSize="18sp"
-                        android:layout_marginBottom="16dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/buttonManageDevices"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Manage Devices"
-                        style="@style/SmartFan.Button.Secondary"
-                        app:icon="@drawable/ic_device_online" />
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
-
             <!-- Notifications Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"

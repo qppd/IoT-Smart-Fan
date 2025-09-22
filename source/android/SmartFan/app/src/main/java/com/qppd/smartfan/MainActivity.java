@@ -32,7 +32,6 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private DatabaseReference dbRef;
     private String uid;
-    private String linkedDeviceId;
 
     // UI Components
     private CoordinatorLayout coordinatorLayout;
@@ -67,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
         initializeViews();
         setupToolbar();
         setupBottomNavigation();
-        checkLinkedDevice();
+        setupDashboard();
     }
 
     private void initializeAuth() {
@@ -159,29 +158,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void checkLinkedDevice() {
-        dbRef.child("users").child(uid).child("devices").addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                if (!snapshot.exists() || snapshot.getChildrenCount() == 0) {
-                    startActivity(new Intent(MainActivity.this, com.qppd.smartfan.device.SetupDeviceActivity.class));
-                    finish();
-                } else {
-                    for (DataSnapshot deviceSnap : snapshot.getChildren()) {
-                        linkedDeviceId = deviceSnap.getKey();
-                        break;
-                    }
-                    setupDashboard();
-                }
-            }
-
-            @Override
-            public void onCancelled(DatabaseError error) {
-                showSnackbar("Failed to load device data", false);
-            }
-        });
-    }
-
     private void setupDashboard() {
         animateCardsEntry();
         setupDeviceDataListener();
@@ -211,60 +187,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupDeviceDataListener() {
-        dbRef.child("devices").child(linkedDeviceId).child("current").addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    updateDeviceStatus(true);
-                    
-                    // Existing data
-                    Double temp = snapshot.child("temperature").getValue(Double.class);
-                    Long fanSpeed = snapshot.child("fanSpeed").getValue(Long.class);
-                    String mode = snapshot.child("mode").getValue(String.class);
-                    
-                    // New power monitoring data
-                    Double voltage = snapshot.child("voltage").getValue(Double.class);
-                    Double current = snapshot.child("current").getValue(Double.class);
-                    Double watt = snapshot.child("watt").getValue(Double.class);
-                    Double kwh = snapshot.child("kwh").getValue(Double.class);
-                    
-                    if (temp != null) {
-                        updateTemperatureDisplay(temp);
-                    }
-                    
-                    if (fanSpeed != null) {
-                        updateFanDisplay(fanSpeed.intValue());
-                    }
-                    
-                    if (mode != null) {
-                        updateModeDisplay(mode);
-                    }
-                    
-                    // Update power monitoring displays
-                    if (voltage != null && current != null) {
-                        updatePowerDisplay(voltage, current);
-                    }
-                    
-                    if (watt != null) {
-                        updateWattDisplay(watt);
-                    }
-                    
-                    if (kwh != null) {
-                        updateEnergyDisplay(kwh);
-                    }
-                    
-                    updateLastSeenTime();
-                } else {
-                    updateDeviceStatus(false);
-                }
-            }
-
-            @Override
-            public void onCancelled(DatabaseError error) {
-                updateDeviceStatus(false);
-                showSnackbar("Failed to connect to device", false);
-            }
-        });
+        // Set default/demo values since no device is linked
+        updateDeviceStatus(false); // Show device as offline
+        updateTemperatureDisplay(25.0); // Default temperature
+        updateFanDisplay(0); // Fan off
+        updateModeDisplay("manual"); // Manual mode
+        
+        // Default power monitoring values
+        updatePowerDisplay(220.0, 0.0); // Voltage with no current
+        updateWattDisplay(0.0); // No power consumption
+        updateEnergyDisplay(0.0); // No energy consumption
+        
+        updateLastSeenTime();
     }
 
     private void updateDeviceStatus(boolean isOnline) {
@@ -411,12 +345,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateDeviceMode(String mode) {
-        dbRef.child("devices").child(linkedDeviceId).child("current").child("mode").setValue(mode);
+        // Device mode update removed - no device linked
+        showSnackbar("No device connected to update mode", false);
     }
 
     private void updateDeviceFanSpeed(int fanSpeed) {
-        dbRef.child("devices").child(linkedDeviceId).child("current").child("fanSpeed").setValue(fanSpeed);
-        showSnackbar(getString(R.string.message_fan_speed_updated), true);
+        // Fan speed update removed - no device linked 
+        showSnackbar("No device connected to update fan speed", false);
     }
 
     private void setupQuickActions() {
@@ -552,9 +487,6 @@ public class MainActivity extends AppCompatActivity {
             startActivity(new Intent(MainActivity.this, HistoryActivity.class));
             return true;
         } else if (itemId == 3) {
-            startActivity(new Intent(MainActivity.this, com.qppd.smartfan.device.DeviceManagementActivity.class));
-            return true;
-        } else if (itemId == 4) {
             showLogoutConfirmDialog();
             return true;
         }
