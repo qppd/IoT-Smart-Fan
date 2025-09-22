@@ -305,6 +305,7 @@ void FirebaseManager::logDeviceData(const String& deviceId, unsigned long timest
     
     FirebaseJson json;
     json.set("timestamp", (int64_t)timestamp);
+    json.set("datetime", getFormattedDateTimeWithFallback()); // Add human-readable datetime
     json.set("temperature", temperature);
     json.set("fanSpeed", fanSpeed);
     json.set("voltage", voltage);
@@ -313,9 +314,9 @@ void FirebaseManager::logDeviceData(const String& deviceId, unsigned long timest
     json.set("kwh", kwh);
     
     if (Firebase.RTDB.setJSON(&fbdo, path, &json)) {
-        Serial.println("Device log entry added in Firebase.");
+        Serial.println(getCurrentLogPrefix() + "Device log entry added in Firebase.");
     } else {
-        Serial.print("Failed to add device log: ");
+        Serial.print(getCurrentLogPrefix() + "Failed to add device log: ");
         Serial.println(fbdo.errorReason());
     }
 }
@@ -330,15 +331,16 @@ void FirebaseManager::sendSmartFanData(float temperature, int fanSpeed, float vo
     json.set("watt", watt);
     json.set("kwh", kwh);
     json.set("device_type", "smart_fan");
-    json.set("timestamp", millis());
+    json.set("timestamp", (int64_t)getNTPTimestampWithFallback()); // Use NTP timestamp with fallback
+    json.set("datetime", getFormattedDateTimeWithFallback()); // Add human-readable datetime
 
-    Serial.println("Sending Smart Fan data as JSON...");
+    Serial.println(getCurrentLogPrefix() + "Sending Smart Fan data as JSON...");
 
     // Send to Firebase under smartfan path
     if (Firebase.RTDB.setJSON(&fbdo, "/smartfan/data", &json)) {
-        Serial.println("Smart Fan data sent successfully!");
+        Serial.println(getCurrentLogPrefix() + "Smart Fan data sent successfully!");
     } else {
-        Serial.print("Error sending Smart Fan data: ");
+        Serial.print(getCurrentLogPrefix() + "Error sending Smart Fan data: ");
         Serial.println(fbdo.errorReason());
     }
 }

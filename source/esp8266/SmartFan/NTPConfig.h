@@ -12,5 +12,11 @@ extern const char* months[12];
 // NTP function declarations
 void initNTP();
 void getNTPDate();
+unsigned long getNTPTimestamp();
+unsigned long getNTPTimestampWithFallback();
+bool isNTPSynced();
+String getFormattedDateTime();
+String getFormattedDateTimeWithFallback();
+String getCurrentLogPrefix();
 
 #endif // NTP_CONFIG_H

@@ -117,7 +117,7 @@ void setup() {
     // ESP Communication setup
     espComm.begin(9600);
     
-    Serial.println("Smart Fan ESP8266 Initialized Successfully!");
+    Serial.println(getCurrentLogPrefix() + "Smart Fan ESP8266 Initialized Successfully!");
     Serial.printf("Final Free Heap: %d bytes\n", ESP.getFreeHeap());
     
     // Initialization complete indicator
@@ -126,7 +126,7 @@ void setup() {
     // Send initial notification - TEMPORARILY DISABLED
     delay(2000);
     // firebaseManager.sendMessage("Smart Fan", "ESP8266 WiFi/Firebase module started! 🌟");
-    Serial.println("📲 FCM disabled - system started successfully");
+    Serial.println(getCurrentLogPrefix() + "📲 FCM disabled - system started successfully");
     
     // Test communication with ESP32
     delay(1000);
@@ -217,7 +217,7 @@ void requestESP32Data() {
 
 void checkESP32Connection() {
     if (!fanData.esp32Connected) {
-        Serial.println("⚠️ ESP32 connection lost - sending alert");
+        Serial.println(getCurrentLogPrefix() + "⚠️ ESP32 connection lost - sending alert");
         // FCM temporarily disabled
         // if (firebaseManager.isReady()) {
         //     firebaseManager.sendMessage("Smart Fan Alert", "ESP32 sensor module disconnected! ⚠️");
@@ -230,12 +230,20 @@ void checkESP32Connection() {
 
 void sendFirebaseData() {
     if (!firebaseManager.isReady()) {
-        Serial.println("Firebase not ready, skipping data send");
+        Serial.println(getCurrentLogPrefix() + "Firebase not ready, skipping data send");
         return;
     }
     
-    unsigned long now = millis() / 1000 + 1692620000; // Convert to timestamp
+    unsigned long now = getNTPTimestampWithFallback(); // Use NTP timestamp with fallback
     float watt = fanData.voltage * fanData.current;
+    
+    // Log timestamp source for debugging
+    static unsigned long lastTimestampLog = 0;
+    if (millis() - lastTimestampLog > 300000) { // Log every 5 minutes
+        String timeSource = isNTPSynced() ? "NTP" : "Fallback";
+        Serial.println(getCurrentLogPrefix() + "🕐 Using " + timeSource + " timestamp: " + String(now));
+        lastTimestampLog = millis();
+    }
     
     // Update current device state
     firebaseManager.updateDeviceCurrent(
@@ -280,7 +288,7 @@ void sendFirebaseData() {
     );
     
     String connStatus = fanData.esp32Connected ? "🟢" : "🔴";
-    Serial.println("📊 Data sent to Firebase " + connStatus);
+    Serial.println(getCurrentLogPrefix() + "📊 Data sent to Firebase " + connStatus);
 }
 
 void sendStatusNotification() {
@@ -297,7 +305,7 @@ void sendStatusNotification() {
     
     // Send to all registered devices - FCM temporarily disabled
     // firebaseManager.sendMessageToAll("Smart Fan Update", statusMessage);
-    Serial.println("📱 Status notification prepared (FCM disabled): " + statusMessage);
+    Serial.println(getCurrentLogPrefix() + "📱 Status notification prepared (FCM disabled): " + statusMessage);
 }
 
 void handleWiFiReset() {
@@ -360,25 +368,25 @@ void handleWiFiReset() {
 
 // Test function for ESP8266 communication
 void testESP8266Communication() {
-    Serial.println("=== ESP8266 Communication Test ===");
+    Serial.println(getCurrentLogPrefix() + "=== ESP8266 Communication Test ===");
     
     bool testResult = espComm.testCommunication();
     
     if (testResult) {
-        Serial.println("✅ ESP32 communication working!");
+        Serial.println(getCurrentLogPrefix() + "✅ ESP32 communication working!");
         // FCM temporarily disabled
         // if (firebaseManager.isReady()) {
         //     firebaseManager.sendMessage("Smart Fan", "ESP8266-ESP32 communication established! ✅");
         // }
     } else {
-        Serial.println("❌ ESP32 communication failed!");
+        Serial.println(getCurrentLogPrefix() + "❌ ESP32 communication failed!");
         // FCM temporarily disabled
         // if (firebaseManager.isReady()) {
         //     firebaseManager.sendMessage("Smart Fan Alert", "ESP32 communication failed! ❌");
         // }
     }
     
-    Serial.println("=== ESP8266 Communication Test Complete ===");
+    Serial.println(getCurrentLogPrefix() + "=== ESP8266 Communication Test Complete ===");
 }
 
 
