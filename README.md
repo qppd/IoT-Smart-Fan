@@ -1373,30 +1373,38 @@ Notes:
 <details>
 <summary><b>�️ Temperature-Based Fan Control</b></summary>
 
-**Automatic Fan Speed Logic:**
-Based on temperature difference from target:
+
+**Automatic Fan Speed Logic (as of September 2025):**
+The ESP32 now uses **absolute temperature thresholds** for fan speed control, not temperature difference from target. The logic is:
 ```cpp
-// Fan control logic in ESP32 SmartFan.ino
-if (tempDiff >= 3.0) {
-    fanSpeed = 100;  // Maximum speed
-} else if (tempDiff >= 2.0) {
-    fanSpeed = 80;   // High speed
-} else if (tempDiff >= 1.0) {
-    fanSpeed = 60;   // Medium speed
-} else if (tempDiff >= 0.5) {
-    fanSpeed = 40;   // Low speed
+// ESP32 SmartFan.ino (auto mode)
+if (currentTemp >= 32.0) {
+   fanSpeed = 99;  // 99% speed (≥32°C)
+} else if (currentTemp >= 30.0) {
+   fanSpeed = 90;  // 90% speed (30–31.99°C)
+} else if (currentTemp >= 28.0) {
+   fanSpeed = 80;  // 80% speed (28–29.99°C)
+} else if (currentTemp >= 26.0) {
+   fanSpeed = 70;  // 70% speed (26–27.99°C)
+} else if (currentTemp >= 24.0) {
+   fanSpeed = 60;  // 60% speed (24–25.99°C)
+} else if (currentTemp >= 22.0) {
+   fanSpeed = 50;  // 50% speed (22–23.99°C)
 } else {
-    fanSpeed = 25;   // Minimum speed
+   fanSpeed = 0;   // OFF (<22°C)
 }
 ```
 
-**Temperature Thresholds:**
-- **+3°C or more**: 100% fan speed + buzzer alert
-- **+2°C to +3°C**: 80% fan speed  
-- **+1°C to +2°C**: 60% fan speed
-- **+0.5°C to +1°C**: 40% fan speed
-- **0°C to +0.5°C**: 25% fan speed
-- **Below target**: 10% minimum speed
+**Thresholds:**
+- **≥32°C**: 99% fan speed
+- **30–31.99°C**: 90% fan speed
+- **28–29.99°C**: 80% fan speed
+- **26–27.99°C**: 70% fan speed
+- **24–25.99°C**: 60% fan speed
+- **22–23.99°C**: 50% fan speed
+- **<22°C**: OFF (0%)
+
+> **Note:** This replaces the previous tempDiff-based logic. The README and codebase are now consistent as of September 2025.
 
 </details>
 
