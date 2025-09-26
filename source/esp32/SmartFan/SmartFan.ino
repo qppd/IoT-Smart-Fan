@@ -219,6 +219,13 @@ void controlFanSpeed() {
     triac.setPower(fanControl.currentFanSpeed);
     Serial.println("🌀 Fan speed updated: " + String(fanControl.currentFanSpeed) + "%");
 
+    // Play buzzer when speed changes
+    if (fanControl.buzzerEnabled) {
+      buzzer.beep(300);
+      espComm.sendBuzzerStatus(true);
+      Serial.println("🔔 Buzzer alert: fan speed changed!");
+    }
+
     // Verify TRIAC received the command
     int triacPower = triac.getPower();
     Serial.printf("✅ TRIAC confirmed power: %d%%\n", triacPower);
@@ -233,24 +240,11 @@ void controlFanSpeed() {
 }
 
 void handleBuzzerAlerts() {
-  bool shouldAlert = false;
-
-  // Temperature alert
-  if (sensors.sensorsOk && sensors.temperature > (fanControl.targetTemperature + 3.0)) {
-    shouldAlert = true;
-  }
-
-  // Manual alert from ESP8266
-  if (fanControl.buzzerAlert) {
-    shouldAlert = true;
-    fanControl.buzzerAlert = false;  // Reset flag
-  }
-
-  // Activate buzzer if needed
-  if (shouldAlert && fanControl.buzzerEnabled) {
+  // Only beep if temperature is above 37.5°C
+  if (sensors.sensorsOk && sensors.temperature > 37.5 && fanControl.buzzerEnabled) {
     buzzer.beep(300);  // Beep for 300ms
     espComm.sendBuzzerStatus(true);
-    Serial.println("🔔 Buzzer alert triggered!");
+    Serial.println("🔔 Buzzer alert: temperature > 37.5°C!");
   } else {
     espComm.sendBuzzerStatus(false);
   }

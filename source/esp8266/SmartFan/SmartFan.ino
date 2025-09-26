@@ -177,7 +177,7 @@ void loop() {
     }
     
     // Handle WiFi reset button - DISABLED (Pin D8 stuck LOW)
-    handleWiFiReset();
+    //handleWiFiReset();
     
     // Update LED status indicator
     updateLEDStatus();
