@@ -106,7 +106,7 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Temperature Thresholds Card -->
+            <!-- Device Linking Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -124,75 +124,42 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/settings_temperature_thresholds"
+                        android:text="Device Configuration"
                         android:textAppearance="@style/SmartFan.Text.Headline"
                         android:textSize="18sp"
                         android:layout_marginBottom="16dp" />
 
-                    <!-- Min Temperature -->
+                    <!-- Device ID Input -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/settings_min_temp"
+                        android:text="SmartFan Device ID"
                         android:textAppearance="@style/SmartFan.Text.Body"
                         android:layout_marginBottom="8dp" />
 
-                    <com.google.android.material.slider.Slider
-                        android:id="@+id/sliderMinTemp"
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/textInputLayoutDeviceId"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:valueFrom="0"
-                        android:valueTo="50"
-                        android:stepSize="1"
-                        android:value="20"
-                        app:thumbColor="?attr/colorPrimary"
-                        app:trackColorActive="?attr/colorPrimary"
-                        app:trackColorInactive="?attr/colorOnSurface"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginBottom="16dp"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:hint="Enter SmartFan Device ID">
 
-                    <TextView
-                        android:id="@+id/textViewMinTemp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="20°C"
-                        android:textAppearance="@style/SmartFan.Text.Caption"
-                        android:layout_marginBottom="16dp" />
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/editTextDeviceId"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="text"
+                            android:text="SmartFan_ESP8266_000" />
 
-                    <!-- Max Temperature -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/settings_max_temp"
-                        android:textAppearance="@style/SmartFan.Text.Body"
-                        android:layout_marginBottom="8dp" />
-
-                    <com.google.android.material.slider.Slider
-                        android:id="@+id/sliderMaxTemp"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:valueFrom="20"
-                        android:valueTo="100"
-                        android:stepSize="1"
-                        android:value="35"
-                        app:thumbColor="?attr/colorPrimary"
-                        app:trackColorActive="?attr/colorPrimary"
-                        app:trackColorInactive="?attr/colorOnSurface"
-                        android:layout_marginBottom="8dp" />
-
-                    <TextView
-                        android:id="@+id/textViewMaxTemp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="35°C"
-                        android:textAppearance="@style/SmartFan.Text.Caption"
-                        android:layout_marginBottom="16dp" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/buttonSaveSettings"
+                        android:id="@+id/buttonSaveDeviceId"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="end"
-                        android:text="Save Settings"
+                        android:text="Save Device ID"
                         style="@style/SmartFan.Button.Primary" />
 
                 </LinearLayout>

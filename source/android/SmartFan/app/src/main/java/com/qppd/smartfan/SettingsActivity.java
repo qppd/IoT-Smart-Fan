@@ -10,21 +10,25 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.slider.Slider;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.messaging.FirebaseMessaging;
 import java.util.Locale;
 
 public class SettingsActivity extends AppCompatActivity {
     private MaterialToolbar toolbar;
     private SwitchMaterial switchTheme, switchNotifications;
-    private Slider sliderMinTemp, sliderMaxTemp;
-    private TextView textViewMinTemp, textViewMaxTemp;
-    private MaterialButton buttonSave;
+    private TextInputEditText editTextDeviceId;
+    private TextInputLayout textInputLayoutDeviceId;
+    private MaterialButton buttonSaveDeviceId;
     private DatabaseReference dbRef;
     private String uid;
 
@@ -44,11 +48,9 @@ public class SettingsActivity extends AppCompatActivity {
         toolbar = findViewById(R.id.toolbar);
         switchTheme = findViewById(R.id.switchTheme);
         switchNotifications = findViewById(R.id.switchNotifications);
-        sliderMinTemp = findViewById(R.id.sliderMinTemp);
-        sliderMaxTemp = findViewById(R.id.sliderMaxTemp);
-        textViewMinTemp = findViewById(R.id.textViewMinTemp);
-        textViewMaxTemp = findViewById(R.id.textViewMaxTemp);
-        buttonSave = findViewById(R.id.buttonSaveSettings);
+        editTextDeviceId = findViewById(R.id.editTextDeviceId);
+        textInputLayoutDeviceId = findViewById(R.id.textInputLayoutDeviceId);
+        buttonSaveDeviceId = findViewById(R.id.buttonSaveDeviceId);
     }
 
     private void setupToolbar() {
@@ -74,23 +76,8 @@ public class SettingsActivity extends AppCompatActivity {
             showSnackbar("Theme updated", true);
         });
 
-        // Temperature sliders
-        sliderMinTemp.addOnChangeListener((slider, value, fromUser) -> {
-            textViewMinTemp.setText(String.format(Locale.getDefault(), "%.0f°C", value));
-            if (value >= sliderMaxTemp.getValue()) {
-                sliderMaxTemp.setValue(value + 1);
-            }
-        });
-
-        sliderMaxTemp.addOnChangeListener((slider, value, fromUser) -> {
-            textViewMaxTemp.setText(String.format(Locale.getDefault(), "%.0f°C", value));
-            if (value <= sliderMinTemp.getValue()) {
-                sliderMinTemp.setValue(value - 1);
-            }
-        });
-
-        // Save button
-        buttonSave.setOnClickListener(v -> saveSettings());
+        // Device ID save button
+        buttonSaveDeviceId.setOnClickListener(v -> saveDeviceId());
 
         // Notifications switch
         switchNotifications.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -106,11 +93,8 @@ public class SettingsActivity extends AppCompatActivity {
         switchTheme.setChecked(darkMode);
         AppCompatDelegate.setDefaultNightMode(darkMode ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
 
-        // Load temperature settings from Firebase or set defaults
-        sliderMinTemp.setValue(20f);
-        sliderMaxTemp.setValue(35f);
-        textViewMinTemp.setText("20°C");
-        textViewMaxTemp.setText("35°C");
+        // Load current device ID from user settings
+        loadCurrentDeviceId();
 
         // Save FCM token to database
         FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
@@ -121,25 +105,53 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
-    private void saveSettings() {
-        int minTemp = (int) sliderMinTemp.getValue();
-        int maxTemp = (int) sliderMaxTemp.getValue();
+    private void loadCurrentDeviceId() {
+        dbRef.child("smartfan").child("users").child(uid).child("deviceId")
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    String currentDeviceId = snapshot.getValue(String.class);
+                    if (currentDeviceId != null && !currentDeviceId.isEmpty()) {
+                        editTextDeviceId.setText(currentDeviceId);
+                    } else {
+                        // Set default device ID
+                        editTextDeviceId.setText("SmartFan_ESP8266_000");
+                    }
+                }
 
-        if (minTemp >= maxTemp) {
-            showSnackbar("Minimum temperature must be less than maximum", false);
-            return;
-        }
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    showSnackbar("Failed to load device ID: " + error.getMessage(), false);
+                    editTextDeviceId.setText("SmartFan_ESP8266_000");
+                }
+            });
+    }
 
-        if (minTemp < 0 || maxTemp > 100) {
-            showSnackbar("Temperature thresholds must be between 0°C and 100°C", false);
-            return;
-        }
-
-        // Save to Firebase
-        dbRef.child("smartfan").child("users").child(uid).child("settings").child("tempMin").setValue(minTemp);
-        dbRef.child("smartfan").child("users").child(uid).child("settings").child("tempMax").setValue(maxTemp);
+    private void saveDeviceId() {
+        String deviceId = editTextDeviceId.getText().toString().trim();
         
-        showSnackbar(getString(R.string.message_settings_saved), true);
+        if (deviceId.isEmpty()) {
+            textInputLayoutDeviceId.setError(getString(R.string.error_device_id_empty));
+            return;
+        }
+
+        if (!deviceId.startsWith("SmartFan_ESP")) {
+            textInputLayoutDeviceId.setError(getString(R.string.error_device_id_invalid));
+            return;
+        }
+
+        textInputLayoutDeviceId.setError(null);
+
+        // Save device ID to user profile
+        dbRef.child("smartfan").child("users").child(uid).child("deviceId").setValue(deviceId)
+            .addOnSuccessListener(aVoid -> {
+                showSnackbar(getString(R.string.message_device_id_saved), true);
+                // Optionally restart MainActivity to pick up new device ID
+                showSnackbar("Please restart the app to connect to the new device", true);
+            })
+            .addOnFailureListener(e -> {
+                showSnackbar("Failed to save device ID: " + e.getMessage(), false);
+            });
     }
 
     private void showSnackbar(String message, boolean isSuccess) {
