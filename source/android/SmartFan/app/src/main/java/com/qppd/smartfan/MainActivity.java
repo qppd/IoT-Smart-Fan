@@ -648,9 +648,9 @@ public class MainActivity extends AppCompatActivity {
                 // Set speed slider to 100 when switching to manual (only if currently 0)
                 int currentSpeed = (int) sliderFanSpeed.getValue();
                 if (currentSpeed == 0) {
-                    sliderFanSpeed.setValue(100);
-                    textViewFanSpeedLabel.setText("Fan Speed: 100");
-                    updateDeviceFanSpeed(100);
+                    //sliderFanSpeed.setValue(100);
+                    //textViewFanSpeedLabel.setText("Fan Speed: 100");
+                    //updateDeviceFanSpeed(100);
                     showSnackbar("Manual mode enabled - Fan speed set to 100", true);
                 } else {
                     // Update current speed to control stream
