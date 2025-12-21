@@ -68,3 +68,7 @@ docs/_build/
 
 # Fritzing backup files
 *.fzz~
+
+# 3D printing files
+*.gcode
+*.stl
